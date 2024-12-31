@@ -1,0 +1,26 @@
+/* Blog.css */
+
+.card {
+    border: 1px solid #ddd; /* Light border for better visibility */
+    border-radius: 8px; /* Rounded corners */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+}
+
+.card-img-top {
+    width: 100%; /* Full width of the card */
+    height: auto; /* Maintain aspect ratio */
+}
+
+.img-small {
+    max-height: 150px; /* Set a maximum height for images */
+    object-fit: cover; /* Cover the area without stretching */
+}
+
+.card-body {
+    flex-grow: 1; /* Allow card body to take up remaining space */
+}
+
+.card-title {
+    font-size: 1.25rem; /* Increase title font size */
+    margin-bottom: 0; /* Remove default margin */
+}

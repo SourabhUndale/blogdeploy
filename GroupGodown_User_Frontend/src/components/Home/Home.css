@@ -1,0 +1,145 @@
+.home-main-div {
+  gap: 50px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.select-div {
+  width: 40%;
+  gap: 7px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.select-div div {
+  line-height: 1.7;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-body {
+  gap: 40px;
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+}
+
+.heading-div {
+  display: flex;
+  flex-direction: column;
+}
+
+.heading-div div {
+  gap: 15px;
+  display: flex;
+  flex-direction: row;
+}
+
+.social-icons-p {
+  display: flex;
+  gap: 7px;
+}
+
+.social-icons-div {
+  display: flex;
+  gap: 5px;
+}
+
+.underline:hover{
+  text-decoration: underline !important;
+}
+
+.card_w{
+  width:75%;
+}
+
+.text-wrap{
+  width: 100%;
+  word-wrap: break-word;
+  text-align: center;
+}
+
+@media screen and (max-width: 700px) {
+  .select-div {
+    width: 75%;
+  }
+  .heading-div{
+    overflow: auto;
+  }
+}
+
+@media screen and (max-width: 500px) {
+  .select-div {
+    width: 98%;
+  }
+  .heading-div{
+    overflow: auto;
+  }
+}
+
+@media screen and (max-width:600px){
+  .card_w{
+     width:100%;
+  }
+  .heading-div{
+    overflow: auto;
+  }
+}
+
+/* @media screen and (max-width:400px){
+  .card_w{
+     width:100%;
+  }
+} */
+
+
+/* -- for SEOsection */
+
+.homepage-container {
+  font-family: Arial, sans-serif;
+  padding: 20px;
+  margin: 0;
+}
+
+header h1 {
+  font-size: 2em;
+  color: #333;
+  margin-bottom: 20px;
+  text-align: left;
+  font-weight: bold;
+}
+
+.intro-section p, .enhance-promotion p {
+  font-size: 1.2em;
+  color: #555;
+  margin-bottom: 30px;
+  line-height: 1.6;
+}
+
+.why-choose-us, .how-it-works .enhance-promotion {
+  margin-bottom: 40px;
+}
+
+.why-choose-us h2, .how-it-works h2, .enhance-promotion h2 {
+  font-size: 2em;
+  color: #333;
+  margin-bottom: 15px;
+  font-weight: bold;
+}
+
+.why-choose-us ul, .how-it-works ol {
+  font-size: 1.1em;
+  color: #444;
+  line-height: 1.8;
+}
+
+.why-choose-us ul li, .how-it-works ol li {
+  margin-bottom: 10px;
+}
+
+strong {
+  color: #333;
+}

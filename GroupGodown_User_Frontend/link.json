@@ -1,0 +1,5 @@
+{
+    "DefaultbaseUri" : "https://api.techkmr.com/",
+    "countryUri" : "https://geodata.phplift.net/api/index.php?type=getCountries",
+    "defaultgroupImg" : "/public/ggLogo.jpeg"
+}

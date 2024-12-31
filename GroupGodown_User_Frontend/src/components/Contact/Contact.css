@@ -1,0 +1,26 @@
+.contact-outer-div {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+.contact-main-div {
+  background-color: white;
+  padding: 40px;
+  width: 65%;
+  box-shadow: 8px 8px 5px #e1e1e1;
+  border-radius: 5px;
+}
+
+@media screen and (max-width: 500px) {
+  .contact-main-div {
+    width: 80%;
+  }
+}
+
+@media screen and (max-width: 360px) {
+  .contact-main-div {
+    width: 95%;
+  }
+}

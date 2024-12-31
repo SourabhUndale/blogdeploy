@@ -1,0 +1,25 @@
+body {
+    background: #f2f2f2;
+    box-sizing: border-box;
+  }
+  
+  .outer-div {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    padding: 20px;
+  }
+  
+  .faq-main-div {
+    background-color: white;
+    padding: 40px;
+    width: 95%;
+    box-shadow: 8px 8px 5px #e1e1e1;
+    border-radius: 5px;
+  }
+  
+  @media screen and (max-width:600px){
+    .faq-main-div{
+        padding: 20px;
+    }
+  }
