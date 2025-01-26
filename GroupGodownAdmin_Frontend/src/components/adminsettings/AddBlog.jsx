@@ -1,43 +1,47 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css"; // Import Quill's CSS for styling
 import baselinks from "../../../baselinks.json";
 
 const oBaseUri = JSON.parse(JSON.stringify(baselinks));
-
 const baseUri = oBaseUri.DefaultbaseUri;
 
 const AddBlog = () => {
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
+    title: "",
+    description: "", // Rich text will be saved here
     imageFile: null,
-    date: '',
+    date: "",
   });
 
   const [blogs, setBlogs] = useState([]);
 
   useEffect(() => {
-    // Fetch all blogs when the component mounts
     fetchBlogs();
   }, []);
 
   const fetchBlogs = async () => {
     try {
-      const response = await axios.get(`${baseUri}api/Blog`,{
+      const response = await axios.get(`${baseUri}api/Blog`, {
         method: "GET",
         headers: {
           Accept: "*/*",
         },
       });
-      setBlogs(response.data); // Assuming the response contains the blog list
+      setBlogs(response.data);
     } catch (error) {
-      console.error('Error fetching blogs:', error);
+      console.error("Error fetching blogs:", error);
     }
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+  };
+
+  const handleQuillChange = (value) => {
+    setFormData({ ...formData, description: value });
   };
 
   const handleFileChange = (e) => {
@@ -47,42 +51,40 @@ const AddBlog = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Prepare FormData for the API
     const data = new FormData();
-    data.append('title', formData.title);
-    data.append('description', formData.description);
+    data.append("title", formData.title);
+    data.append("description", formData.description); // Rich text description
     if (formData.imageFile) {
-      data.append('imageFile', formData.imageFile);
+      data.append("imageFile", formData.imageFile);
     }
-    data.append('date', formData.date);
+    data.append("date", formData.date);
 
     try {
       const response = await axios.post(`${baseUri}api/Blog`, data, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: { "Content-Type": "multipart/form-data" },
       });
-      console.log(response);
-      alert('Blog posted successfully!');
-      fetchBlogs(); // Refresh the blog list after posting a new blog
+      alert("Blog posted successfully!");
+      fetchBlogs();
       setFormData({
-        title: '',
-        description: '',
+        title: "",
+        description: "",
         imageFile: null,
-        date: '',
+        date: "",
       });
     } catch (error) {
-      console.error('Error posting blog:', error);
-      alert('Failed to post blog.');
+      console.error("Error posting blog:", error);
+      alert("Failed to post blog.");
     }
   };
 
   const handleDelete = async (id) => {
     try {
       await axios.delete(`${baseUri}api/Blog/${id}`);
-      alert('Blog deleted successfully!');
-      fetchBlogs(); // Refresh the blog list after deleting a blog
+      alert("Blog deleted successfully!");
+      fetchBlogs();
     } catch (error) {
-      console.error('Error deleting blog:', error);
-      alert('Failed to delete blog.');
+      console.error("Error deleting blog:", error);
+      alert("Failed to delete blog.");
     }
   };
 
@@ -106,20 +108,17 @@ const AddBlog = () => {
           />
         </div>
 
-        {/* Description */}
+        {/* Rich Text Editor for Description */}
         <div>
           <label htmlFor="description" className="block text-sm font-medium text-gray-700">
             Description
           </label>
-          <textarea
-            id="description"
-            name="description"
+          <ReactQuill
+            theme="snow"
             value={formData.description}
-            onChange={handleInputChange}
-            required
-            rows="4"
-            className="mt-1 block w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-          ></textarea>
+            onChange={handleQuillChange}
+            className="mt-1"
+          />
         </div>
 
         {/* ImageFile */}
@@ -180,7 +179,10 @@ const AddBlog = () => {
             {blogs.map((blog) => (
               <tr key={blog.id}>
                 <td className="border border-gray-300 px-4 py-2">{blog.title}</td>
-                <td className="border border-gray-300 px-4 py-2">{blog.description}</td>
+                <td
+                  className="border border-gray-300 px-4 py-2"
+                  dangerouslySetInnerHTML={{ __html: blog.description }} // Render HTML content
+                ></td>
                 <td className="border border-gray-300 px-4 py-2">{blog.date}</td>
                 <td className="border border-gray-300 px-4 py-2">
                   <button

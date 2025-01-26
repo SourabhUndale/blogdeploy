@@ -1,3 +1,4 @@
+cat  Program.cs
 using GrouosAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -25,7 +26,7 @@ static IEdmModel GetEdmModel()
     ODataConventionModelBuilder builder = new();
     var category = builder.EntitySet<Category>("Categories");
     category.EntityType.Filter().OrderBy().Page().Count();
-    
+
     builder.EntitySet<Groups>("Groups").EntityType.Collection.Action("Approve").ReturnsFromEntitySet<Groups>("Groups");
     return builder.GetEdmModel();
 }
@@ -43,7 +44,7 @@ builder.Services.AddControllers().AddOData(options =>
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 //builder.Services.AddSwaggerGen();
-builder.Services.AddScoped<GetGroups>(); 
+builder.Services.AddScoped<GetGroups>();
 builder.Services.AddScoped<IGroupRepository, GroupRepository>();
 builder.Services.AddScoped<IAdminRepository, AdminRepository>();
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
@@ -87,28 +88,15 @@ builder.Services.AddSwaggerGen(c =>
 // CORS configuration
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("CorsPolicy", builder => builder
-        .WithOrigins(
-            "http://localhost:5173",
-            "http://localhost:5174",
-            "http://93.127.166.134:5000",
-            "http://93.127.166.134:5001",
-            "https://groupgodown.com",
-            "https://www.groupgodown.com",
-            "https://admin.groupgodown.com",
-            "https://www.admin.groupgodown.com",
-            "https://admin.groupgodown.com",
-            "http://groupgodown.com",
-            "http://www.groupgodown.com",
-            "http://admin.groupgodown.com",
-            "http://www.admin.groupgodown.com",
-            "http://admin.groupgodown.com",
-            "https://group-godown-user-frontend.vercel.app",
-            "https://group-godown-admin-frontend.vercel.app"
-        )
-        .AllowAnyMethod()
-        .AllowAnyHeader()
-        .AllowCredentials()); // Enables cookies and other credentials
+    options.AddPolicy("CorsPolicy",
+        builder => builder
+            .WithOrigins("http://localhost:5173","http://93.127.166.134:5000","http://93.127.166.134:5001","http://localhost:5174","https://group-godown-user-frontend.vercel.app","https://www.groupgodown.com","https://groupgodown.com/","https://admin.groupgodown.com","https://www.admin.groupgodown.com/","http://groupgodown.com/","http://admin.groupgodown.com/","http://www.admin.groupgodown.com/","http://www.groupgodown.com/","https://group-godown-admin-frontend.vercel.app" )
+            // .WithOrigins("*")
+            // .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials()); // Allow credentials (e.g., cookies, authorization headers)
+           // .DisallowCredentials());
 });
 
 var key = "lecture123456$$$jhgfjkdgfmhgkhjkfgjhgf";

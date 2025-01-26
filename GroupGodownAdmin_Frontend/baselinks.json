@@ -1,5 +1,5 @@
 {
-    "DefaultbaseUri" : "https://api.techkmr.com/",
+    "DefaultbaseUri" : "https://base.groupgodown.com/",
     "countryUri" : "https://geodata.phplift.net/api/index.php?type=getCountries",
     "defaultgroupImg" : "https://cdn.pixabay.com/photo/2015/08/03/13/58/whatsapp-873316_1280.png",
     "records" : "10"

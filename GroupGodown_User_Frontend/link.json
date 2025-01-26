@@ -1,5 +1,5 @@
 {
-    "DefaultbaseUri" : "https://api.techkmr.com/",
+    "DefaultbaseUri" : "https://base.groupgodown.com/",
     "countryUri" : "https://geodata.phplift.net/api/index.php?type=getCountries",
     "defaultgroupImg" : "/public/ggLogo.jpeg"
 }

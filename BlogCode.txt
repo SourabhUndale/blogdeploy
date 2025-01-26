@@ -1,0 +1,262 @@
+Blog.jsx
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import link from "../../../link.json";
+import { Link } from 'react-router-dom'; // Import Link for navigation
+
+import './BlogDetails.css'; // Import custom CSS for card styling
+
+const Blog = () => {
+
+    const obaseUri = JSON.parse(JSON.stringify(link));
+    const baseUri = obaseUri.DefaultbaseUri;
+
+    const [data, setData] = useState([]); // Initialize as an empty array
+    const [error, setError] = useState(null);
+    const [loading, setLoading] = useState(true); // Loading state
+
+    useEffect(() => {
+        axios.get(`${baseUri}api/Blog`)
+            .then(response => {
+                console.log(response.data); // Log the entire response
+                setData(response.data); // Assuming response.data contains an array of blog posts
+            })
+            .catch(err => {
+                console.error('Error fetching data:', err);
+                setError('Failed to fetch data');
+            })
+            .finally(() => {
+                setLoading(false); // Set loading to false after fetch
+            });
+    }, []);
+
+    return (
+        <div className="container mt-4">
+            <h1>All Blogs</h1>
+            {error && <p style={{ color: 'red' }}>{error}</p>}
+            {loading ? (
+                <p>Loading...</p>
+            ) : (
+                data.length > 0 ? (
+                    <div className="row">
+                        {data.map((post) => (
+                            <div className="col-md-4 mb-4" key={post.id}>
+                                <Link to={`/blog/${post.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                                    <div className="card h-100">
+                                        {post.imageCon && (
+                                            <img 
+                                                src={`data:image/jpeg;base64,${post.imageCon}`} 
+                                                alt={post.title} 
+                                                className="card-img-top" 
+                                            />
+                                        )}
+                                        <div className="card-body d-flex flex-column">
+                                            <h5 className="card-title">{post.title}</h5>
+                                        </div>
+                                    </div>
+                                </Link>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p>No blog posts available.</p>
+                )
+            )}
+        </div>
+    );
+};
+
+export default Blog;
+
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import { useParams } from 'react-router-dom';
+import link from "../../../link.json";
+import './Blog.css'; // Import a custom CSS file for image sizing
+
+const BlogDetail = () => {
+
+    const obaseUri = JSON.parse(JSON.stringify(link));
+    const baseUri = obaseUri.DefaultbaseUri;
+
+    const { id } = useParams();
+    const [post, setPost] = useState(null);
+    const [error, setError] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        axios.get(`${baseUri}api/Blog/${id}`)
+            .then(response => setPost(response.data))
+            .catch(err => {
+                console.error('Error fetching data:', err);
+                setError('Failed to fetch data');
+            })
+            .finally(() => setLoading(false));
+    }, [id]);
+
+    return (
+        <div className="container mt-4 text-center"> {/* Center all content */}
+            {loading && <p>Loading...</p>}
+            {error && <p className="text-danger">{error}</p>}
+
+            {post && (
+                <div className="blog-detail">
+                    {/* Title */}
+                    <h1 className="mb-4">{post.title}</h1>
+
+                    {/* Image */}
+                    {post.imageCon && (
+                        <div className="d-flex justify-content-center mb-4">
+                            <img
+                                src={`data:image/jpeg;base64,${post.imageCon}`}
+                                alt={post.title}
+                                className="blog-image" /* Custom class for image size */
+                            />
+                        </div>
+                    )}
+
+                    {/* Description */}
+                    <p className="text-muted">{post.description}</p>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default BlogDetail;
+
+BlogCss
+
+
+/* .blog-body{
+    margin: 0;
+    padding: 0;
+    background: hsl(47, 88%, 63%);
+    height: 100vh;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Figtree", sans-serif;
+} */
+/* .outer-div {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    padding: 20px;
+  }
+  .blog-main-div {
+    background-color: white;
+    padding: 40px;
+    width: 95%;
+    box-shadow: 8px 8px 5px #e1e1e1;
+    border-radius: 5px;
+  }
+  
+.card{
+    background: hsl(0, 0%, 100%);
+    margin: 0em 1em 0em 1em;
+    padding: 1.2em;
+    border: solid 1px hsl(0, 0%, 7%);
+    border-radius: 20px;
+    box-shadow: 12px 12px 10px -6px rgba(0,0,0,1);
+
+}
+.img-head img{
+    width: 100%;
+} */
+/* .card button{
+    background: hsl(47, 88%, 63%);
+    border: 0px solid;
+    font-weight: 800;
+    padding: 0.5em 1em 0.5em 1em;
+    border-radius: 5px;
+    margin-top: 1.5em;
+} */
+/* .published{
+    font-weight: 500;
+    font-size: 0.8em;
+    margin:1rem ;
+}
+.card h1{
+    font-size: 1.5em;
+    font-weight: 800;
+}
+.descr{
+    color: hsl(0, 0%, 42%);
+    font-weight: 500;
+}
+.author{
+    display: flex;
+    align-items: center;
+}
+.author img {
+    width: 3em;
+}
+.author h6 {
+    margin-left: 1em;
+    font-size: 1em;
+    font-weight: 800;
+}
+
+
+  .card a {
+    cursor: pointer;
+    color: black;
+    text-decoration: none;
+  }
+
+  #cardi{
+    height: 30rem;
+    width: 30rem;
+  }
+
+
+ */
+
+ .card {
+    display: flex;
+    flex-direction: column; /* Ensure card body stretches */
+}
+
+.card-body {
+    flex-grow: 1; /* Allow card body to take up remaining space */
+}
+
+
+
+.blog-image {
+    width: 30rem; /* Set image size to 15rem */
+    height: auto; /* Maintain aspect ratio */
+    border-radius: 0.5rem; /* Optional: Add rounded corners */
+}
+
+
+BlogDetailsCss
+/* Blog.css */
+
+.card {
+    border: 1px solid #ddd; /* Light border for better visibility */
+    border-radius: 8px; /* Rounded corners */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+}
+
+.card-img-top {
+    width: 100%; /* Full width of the card */
+    height: auto; /* Maintain aspect ratio */
+}
+
+.img-small {
+    max-height: 150px; /* Set a maximum height for images */
+    object-fit: cover; /* Cover the area without stretching */
+}
+
+.card-body {
+    flex-grow: 1; /* Allow card body to take up remaining space */
+}
+
+.card-title {
+    font-size: 1.25rem; /* Increase title font size */
+    margin-bottom: 0; /* Remove default margin */
+}
+

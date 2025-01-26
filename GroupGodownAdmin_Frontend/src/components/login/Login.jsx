@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 
 function Login() {
-  const baseUri = `https://api.techkmr.com/`;
+  const baseUri = `https://base.groupgodown.com/`;
 
   const authenticateUser = async () => {
     const username = document.getElementById("username").value;
