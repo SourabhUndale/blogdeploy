@@ -1,0 +1,17 @@
+GroupGodown - Create client custmizable blog page
+	    - Change Description box to word panel
+ current    - Add customizable URL
+	    - Deployment 
+
+Land Matrix - Change all web-site.
+	    - Convert .net to react and database removed
+	    - Changes perform Navbar, Testimonial, create each services Pages and service section changes and Form creation...
+	    - Deployment
+
+GetPass	    - Deployment
+
+Pearl	    - 2 months  change perform
+
+Plume        - 2 months chnages perform	    
+
+	     	
