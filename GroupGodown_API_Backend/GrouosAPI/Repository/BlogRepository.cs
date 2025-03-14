@@ -124,6 +124,20 @@ namespace GrouosAPI.Repository
             return System.IO.File.ReadAllBytes(filePath);
         }
 
+        public async Task<Blog> GetBlogByTitleAsync(string title, CancellationToken cancellationToken)
+        {
+            // Fetch the blog by title
+            var blog = await DbContext.Blogs.FirstOrDefaultAsync(b => b.Title == title, cancellationToken);
+
+            if (blog != null)
+            {
+                // Fetch and assign the image content
+                blog.ImageCon = await GetImageAsync(blog.Image);
+            }
+
+            return blog;
+        }
+
 
     }
 }

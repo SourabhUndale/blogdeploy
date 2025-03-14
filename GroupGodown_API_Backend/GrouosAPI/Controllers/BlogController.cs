@@ -102,6 +102,21 @@ namespace GrouosAPI.Controllers
             return Ok(updatedBlog);
         }
 
+
+        [HttpGet("title/{title}")]
+        public async Task<IActionResult> GetBlogByTitle(string title, CancellationToken cancellationToken)
+        {
+            string formattedTitle = title.Replace("-", " "); // Convert hyphens back to spaces
+            var blog = await _blogRepository.GetBlogByTitleAsync(formattedTitle, cancellationToken);
+
+            if (blog == null)
+            {
+                return NotFound(new { Message = "Blog not found." });
+            }
+
+            return Ok(blog);
+        }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteBlog(int id, CancellationToken cancellationToken)
         {

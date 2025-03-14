@@ -40,7 +40,7 @@ const router = createBrowserRouter(
       {/* Add a catch-all route to handle routes with query parameters */}
       <Route path="groupinvite/*" element={<GroupInvite />} />
       <Route path="/blog" element={<Blog />} />
-      <Route path="/blog/:id" element={<BlogDetail />} />
+      <Route path="/blog/:titleSlug" element={<BlogDetail />} />
     </Route>
   )
 );

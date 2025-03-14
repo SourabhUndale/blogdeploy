@@ -2,57 +2,62 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useParams } from 'react-router-dom';
 import link from "../../../link.json";
-import './Blog.css'; // Import a custom CSS file for styling
+import './Blog.css'; 
+
 
 const BlogDetail = () => {
     const obaseUri = JSON.parse(JSON.stringify(link));
     const baseUri = obaseUri.DefaultbaseUri;
 
-    const { id } = useParams();
+    const { titleSlug } = useParams(); // Get the title slug from URL
     const [post, setPost] = useState(null);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        axios.get(`${baseUri}api/Blog/${id}`)
-            .then(response => setPost(response.data))
+        const formattedTitle = titleSlug.replace(/-/g, ' '); // Convert hyphens back to spaces
+        axios.get(`${baseUri}api/blog/title/${formattedTitle}`)
+            .then(response => {
+                setPost(response.data);
+            })
             .catch(err => {
                 console.error('Error fetching data:', err);
-                setError('Failed to fetch data');
+                setError('Failed to fetch blog details');
             })
             .finally(() => setLoading(false));
-    }, [id]);
+    }, [titleSlug]);
 
     return (
-        <div className="container mt-4"> {/* Center all content */}
-            {loading && <p>Loading...</p>}
-            {error && <p className="text-danger">{error}</p>}
-
+        <div className="blog-container mt-4">
+            {loading && <p className="blog-loading">Loading...</p>}
+            {error && <p className="blog-error">{error}</p>}
+    
             {post && (
-                <div className="blog-detail">
-                    {/* Title */}
-                    <h1 className="mb-4">{post.title}</h1>
-
-                    {/* Image */}
+                <div className="blog-content">
+                    {/* Blog Title */}
+                    <h1 className="blog-title">{post.title}</h1>
+    
+                    {/* Blog Image */}
                     {post.imageCon && (
-                        <div className="d-flex  mb-4">
+                        <div className="blog-image-wrapper">
                             <img
                                 src={`data:image/jpeg;base64,${post.imageCon}`}
                                 alt={post.title}
-                                className="blog-image" // Custom class for image size
+                                className="blog-image"
                             />
                         </div>
                     )}
-
-                    {/* Description */}
+    
+                    {/* Blog Description */}
                     <div
-                        className="blog-description text-gray"
+                        className="blog-text"
                         dangerouslySetInnerHTML={{ __html: post.description }}
                     ></div>
                 </div>
             )}
         </div>
     );
+    
 };
 
 export default BlogDetail;

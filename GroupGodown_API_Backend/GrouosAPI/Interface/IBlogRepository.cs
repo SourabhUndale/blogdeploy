@@ -39,4 +39,6 @@ public interface IBlogRepository
     /// <param name="id">The ID of the blog to delete.</param>
     /// <returns>True if the deletion was successful; otherwise, false.</returns>
     Task<bool> DeleteBlogAsync(int id, CancellationToken cancellationToken = default);
+
+    Task<Blog> GetBlogByTitleAsync(string title, CancellationToken cancellationToken);
 }
