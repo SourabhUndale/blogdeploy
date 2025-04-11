@@ -10,6 +10,7 @@ import { Helmet } from "react-helmet-async";
 import Loader from "../Loader/Loader"; // Import the Loader component
 import replacelogo from "/ggLogo.jpeg"
 import metaImage from "../data/ggLogo.jpeg"
+import countriesData from "../../../country-by-abbreviation.json"
 
 export default function Home() {
   const navigate = useNavigate(); // Initialize useHistory
@@ -20,16 +21,17 @@ export default function Home() {
 
   const obaseUri = JSON.parse(JSON.stringify(link));
   const baseUri = obaseUri.DefaultbaseUri;
-  const countryUri = obaseUri.countryUri;
+  // const countryUri = obaseUri.countryUri;
   const langData = JSON.parse(JSON.stringify(languagesData));
+  const countryData = JSON.parse(JSON.stringify(countriesData));
   const defualtgroupImg = obaseUri.defaultgroupImg;
 
-  const { data: apiResponse, loading: countriesLoading } = useDataFetch(
-    countryUri,
-    []
-  );
+  // const { data: apiResponse, loading: countriesLoading } = useDataFetch(
+  //   countryUri,
+  //   []
+  // );
 
-  const countries = apiResponse?.result || [];
+  // const countries = apiResponse?.result || [];
 
   const { data: categories, loading: categoriesLoading } = useDataFetch(
     `${baseUri}api/Category`,
@@ -291,6 +293,29 @@ export default function Home() {
                 ))}
             </select>
           </div>
+
+          {/* <div>
+            <label>Any Country</label>
+            <select
+              name="Country"
+              className="form-select"
+              value={selectedCountry}
+              onChange={(e) => {
+                const selectedCon = e.target.value;
+                const newCon = selectedCon === "Any Country" ? "" : selectedCon;
+                setSelectedCountry(newCon);
+              }}
+            >
+              <option>Any Country</option>
+              {Object.entries(countryData).map(([code, name]) => (
+                <option key={code} value={name}>
+                  {name}
+                </option>
+              ))}
+
+            </select>
+          </div> */}
+
           <div>
             <label>Any Country</label>
             <select
@@ -304,13 +329,14 @@ export default function Home() {
               }}
             >
               <option>Any Country</option>
-              {countries.map((country) => (
-                <option key={country.id} value={country.name}>
-                  {country.name}
+              {countryData.map(({ abbreviation, country }) => (
+                <option key={abbreviation} value={country}>
+                  {country}
                 </option>
               ))}
-            </select>
+            </select> 
           </div>
+
           <div>
             <label>Any Language</label>
             <select

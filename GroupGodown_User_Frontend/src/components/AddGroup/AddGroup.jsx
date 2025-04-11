@@ -5,23 +5,16 @@ import axios from "axios";
 import link from "../../../link.json";
 import { json, redirect, useNavigate } from "react-router-dom";
 import languagesData from "../../../lang.json";
+import countriesData from "../../../country-by-abbreviation.json"
 import { Helmet } from "react-helmet-async";
 import metaImage from "../data/ggLogo.jpeg"
 
 function AddGroup() {
   const obaseUri = JSON.parse(JSON.stringify(link));
   const langData = JSON.parse(JSON.stringify(languagesData));
+  const countryData = JSON.parse(JSON.stringify(countriesData));
   const baseUri = obaseUri.DefaultbaseUri;
-  const countryUri = obaseUri.countryUri;
   const navigate = useNavigate(); // Initialize useHistory
-
-
-  const { data: apiResponse, loading: countriesLoading } = useDataFetch(
-    countryUri,
-    []
-  );
-
-  const countries = apiResponse?.result || [];
 
   const { data: categories, loading: categoriesLoading } = useDataFetch(
     `${baseUri}api/Category`,
@@ -238,11 +231,18 @@ function AddGroup() {
                 }}
               >
                 <option>Any Country</option>
-                {countries.map((country) => (
+                {/* {countries.map((country) => (
                   <option key={country.id} value={country.name}>
                     {country.name}
                   </option>
-                ))}
+                ))} */}
+
+                {countryData.map(({ abbreviation, country }) => (
+                <option key={abbreviation} value={country}>
+                  {country}
+                </option>
+              ))}
+
               </select>
               {selectedCountryError && (
                 <div className="invalid-feedback">{selectedCountryError}</div>
