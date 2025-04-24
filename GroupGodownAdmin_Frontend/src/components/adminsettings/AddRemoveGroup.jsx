@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import useDataFetch from "../../useDataFetch";
 import axios from "axios";
 import languagesData from "../../../lang.json";
+import countryData from "../../../country-by-abbreviation.json"
 import { data } from "autoprefixer";
 import baselinks from "../../../baselinks.json";
 import Button from "@mui/material/Button";
@@ -20,6 +21,7 @@ function AddRemoveGroup() {
   const countryUri = oBaseUri.countryUri;
   const perPageitem = oBaseUri.records;
   const langData = JSON.parse(JSON.stringify(languagesData));
+  const coutriesData = JSON.parse(JSON.stringify(countryData));
 
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -376,11 +378,20 @@ function AddRemoveGroup() {
               }}
             >
               <option>Select</option>
-              {countries.map((country) => (
+              {/* {countries.map((country) => (
                 <option key={country.id} value={country.name}>
                   {country.name}
-                </option>
+                </option> */}
+
+                {countryData.map(({ abbreviation, country }) => (
+                <option key={abbreviation} value={country}>
+                  {country}
+                </option>  
+
               ))}
+
+            
+
             </select>
             {selectedCountryError && (
               <div className="invalid-feedback">{selectedCountryError}</div>
