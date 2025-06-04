@@ -1,7 +1,12 @@
 import React, { useEffect } from "react";
+import baselinks from "../../../baselinks.json";
+
+const oBaseUri = JSON.parse(JSON.stringify(baselinks));
+const baseUri = oBaseUri.DefaultbaseUri;
+
 
 function Login() {
-  const baseUri = `https://base.groupgodown.com/`;
+  // const baseUri = `https://base.groupgodown.com/`;
 
   const authenticateUser = async () => {
     const username = document.getElementById("username").value;

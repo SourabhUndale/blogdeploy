@@ -24,11 +24,12 @@ namespace GrouosAPI.Controllers
     {
         //private readonly DataContext _context;
         private readonly IGroupRepository _groupRepository;
-
-        public GroupsController(/*DataContext context,*/IGroupRepository groupRepository)
+        private readonly IConfiguration _configuration;
+        public GroupsController(IGroupRepository groupRepository, IConfiguration configuration)
         {
             //_context = context;
             _groupRepository = groupRepository;
+            _configuration = configuration;
         }
 
 
@@ -390,6 +391,150 @@ namespace GrouosAPI.Controllers
             //_context.Groups.Remove(group);
             //_context.SaveChanges();
             //return Ok();
+        }
+
+        [HttpPost("bulkAddGroups")]
+        public async Task<IActionResult> BulkAddGroups(IFormFile excelFile)
+        {
+            if (excelFile == null || excelFile.Length == 0)
+                return BadRequest("Excel file is required.");
+
+            List<BulkAddResultDto> results = new List<BulkAddResultDto>();
+
+            // Read delay from config (defaults to 0 if not found)
+            int delayMilliseconds = _configuration.GetValue<int>("BulkUploadSettings:RowProcessingDelayMilliseconds");
+
+            using (var stream = new MemoryStream())
+            {
+                await excelFile.CopyToAsync(stream);
+
+                using (var package = new OfficeOpenXml.ExcelPackage(stream))
+                {
+                    var worksheet = package.Workbook.Worksheets[0]; // first worksheet
+                    int rowCount = worksheet.Dimension.Rows;
+
+                    for (int row = 2; row <= rowCount; row++)
+                    {
+                        // Wait between each row processing
+                        if (delayMilliseconds > 0)
+                            await Task.Delay(delayMilliseconds);
+
+                        if (!int.TryParse(worksheet.Cells[row, 1].Text, out int catId))
+                        {
+                            results.Add(new BulkAddResultDto
+                            {
+                                RowNumber = row,
+                                GroupLink = worksheet.Cells[row, 3].Text,
+                                Status = "Invalid catId"
+                            });
+                            continue;
+                        }
+
+                        if (!int.TryParse(worksheet.Cells[row, 2].Text, out int appId))
+                        {
+                            results.Add(new BulkAddResultDto
+                            {
+                                RowNumber = row,
+                                GroupLink = worksheet.Cells[row, 3].Text,
+                                Status = "Invalid appId"
+                            });
+                            continue;
+                        }
+
+                        var groupLink = worksheet.Cells[row, 3].Text;
+                        var groupDesc = worksheet.Cells[row, 4].Text;
+                        var groupRules = worksheet.Cells[row, 5].Text;
+                        var country = worksheet.Cells[row, 6].Text;
+                        var language = worksheet.Cells[row, 7].Text;
+                        var tags = worksheet.Cells[row, 8].Text;
+
+                        if (string.IsNullOrEmpty(groupLink))
+                        {
+                            results.Add(new BulkAddResultDto
+                            {
+                                RowNumber = row,
+                                GroupLink = groupLink,
+                                Status = "Invalid groupLink"
+                            });
+                            continue;
+                        }
+
+                        var addGroupDto = new addGroupDto
+                        {
+                            groupLink = groupLink,
+                            groupDesc = groupDesc,
+                            groupRules = groupRules,
+                            country = country,
+                            Language = language,
+                            tags = tags
+                        };
+
+                        try
+                        {
+                            var result = _groupRepository.AddGroup(catId, appId, addGroupDto);
+                            if (result != null && result.message == "Group Already Exist")
+                            {
+                                results.Add(new BulkAddResultDto
+                                {
+                                    RowNumber = row,
+                                    GroupLink = groupLink,
+                                    Status = "Group Already Exists"
+                                });
+                            }
+                            else if (result == null)
+                            {
+                                results.Add(new BulkAddResultDto
+                                {
+                                    RowNumber = row,
+                                    GroupLink = groupLink,
+                                    Status = "Failed to add group"
+                                });
+                            }
+                            else
+                            {
+                                results.Add(new BulkAddResultDto
+                                {
+                                    RowNumber = row,
+                                    GroupLink = groupLink,
+                                    Status = "Added successfully"
+                                });
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            results.Add(new BulkAddResultDto
+                            {
+                                RowNumber = row,
+                                GroupLink = groupLink,
+                                Status = $"Error: {ex.Message}"
+                            });
+                        }
+                    }
+
+                    // Add status column in Excel (column 9)
+                    worksheet.Cells[1, 9].Value = "Status";
+                    foreach (var res in results)
+                    {
+                        worksheet.Cells[res.RowNumber, 9].Value = res.Status;
+                    }
+
+                    var outputStream = new MemoryStream();
+                    package.SaveAs(outputStream);
+                    outputStream.Position = 0;
+
+                    string excelName = $"GroupImportResult-{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+
+                    return File(outputStream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", excelName);
+                }
+            }
+        }
+
+
+        [HttpGet("getRowProcessingDelay")]
+        public IActionResult GetRowProcessingDelay()
+        {
+            int delayMilliseconds = _configuration.GetValue<int>("BulkUploadSettings:RowProcessingDelayMilliseconds");
+            return Ok(new { delayMilliseconds });
         }
 
 
