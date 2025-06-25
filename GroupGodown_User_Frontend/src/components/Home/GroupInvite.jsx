@@ -9,21 +9,35 @@ import { useSearch } from "../../SearchContext";
 import replacelogo from "/ggLogo.jpeg"
   
 function GroupInvite() {
+  // All hooks at the top
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const id = searchParams.get("id");
   const catId = searchParams.get("catId");
-
   const obaseUri = JSON.parse(JSON.stringify(link));
   const baseUri = obaseUri.DefaultbaseUri;
   const defualtgroupImg = obaseUri.defaultgroupImg;
-
   const { data: singlegroup } = useDataFetch(`${baseUri}api/Groups/` + id, []);
-
   const { data: relatedData } = useDataFetch(
     `${baseUri}api/Groups/id/Groups?catId=${catId}`,
     []
   );
+  const [reasonCategory, setReasonCategory] = useState("");
+  const [reasonCategoryError, setreasonCategoryError] = useState("");
+  const [reasonDetailsError, setreasonDetailsError] = useState("");
+  const [reasonDetails, setReasonDetails] = useState("");
+  const adsenseClient = link.adsenseClient;
+  const adsenseSlot = link.adsenseSlot;
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (window.adsbygoogle && process.env.NODE_ENV !== 'development') {
+      try {
+        window.adsbygoogle.push({});
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, []);
 
   const shareOnInstagram = (inWhatsapp) => {
     const currentUrl = window.location.href;
@@ -54,8 +68,6 @@ function GroupInvite() {
     window.open(`https://t.me/share/url?url=${TelegramMessage}`, "_blank");
   };
 
-  const navigate = useNavigate();
-
   const handleGroupClick = (groupId, catId) => {
     //alert('Join Clicked');
     navigate(`/groupinvite?id=${groupId}&catId=${catId}`);
@@ -67,11 +79,6 @@ function GroupInvite() {
       ? description.substring(0, 25) + "..."
       : description;
   };
-
-  const [reasonCategory, setReasonCategory] = useState("");
-  const [reasonCategoryError, setreasonCategoryError] = useState("");
-  const [reasonDetailsError, setreasonDetailsError] = useState("");
-  const [reasonDetails, setReasonDetails] = useState("");
 
   const resetReasonCategory = () => {
     setReasonCategory("");
@@ -394,6 +401,17 @@ function GroupInvite() {
           </div>
         </div>
       ))}
+      {/* Google AdSense Responsive Ad Unit */}
+      {/*
+      <div style={{ width: '100%', display: 'flex', justifyContent: 'center', margin: '24px 0' }}>
+        <ins className="adsbygoogle"
+          style={{ display: 'block', width: '100%', maxWidth: 728, minHeight: 90 }}
+          data-ad-client={adsenseClient}
+          data-ad-slot={adsenseSlot}
+          data-ad-format="auto"
+          data-full-width-responsive="true"></ins>
+      </div>
+      */}
     </div>
   );
 }

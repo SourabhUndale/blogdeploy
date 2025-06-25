@@ -3,9 +3,22 @@ import "./Home.css";
 import { useParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import metaImage from "../data/ggLogo.jpeg"
+import link from "../../../link.json";
 
 function JoinGroup() {
+  // All hooks at the top
   let { grouplink } = useParams();
+  const adsenseClient = link.adsenseClient;
+  const adsenseSlot = link.adsenseSlot;
+  React.useEffect(() => {
+    if (window.adsbygoogle && process.env.NODE_ENV !== 'development') {
+      try {
+        window.adsbygoogle.push({});
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, []);
 
   return (
     
@@ -75,6 +88,17 @@ function JoinGroup() {
           </div>
         </div>
       </div>
+      {/* Google AdSense Responsive Ad Unit */}
+      {/*
+      <div style={{ width: '100%', display: 'flex', justifyContent: 'center', margin: '24px 0' }}>
+        <ins className="adsbygoogle"
+          style={{ display: 'block', width: '100%', maxWidth: 728, minHeight: 90 }}
+          data-ad-client={adsenseClient}
+          data-ad-slot={adsenseSlot}
+          data-ad-format="auto"
+          data-full-width-responsive="true"></ins>
+      </div>
+      */}
     </div>
   );
 }

@@ -13,11 +13,11 @@ import metaImage from "../data/ggLogo.jpeg"
 import countriesData from "../../../country-by-abbreviation.json"
 
 export default function Home() {
-  const navigate = useNavigate(); // Initialize useHistory
+  // All hooks at the top
+  const navigate = useNavigate();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const searchQuery = searchParams.get('search') || '';
-
 
   const obaseUri = JSON.parse(JSON.stringify(link));
   const baseUri = obaseUri.DefaultbaseUri;
@@ -98,20 +98,34 @@ export default function Home() {
   const [fetchData, setFetchData] = useState(false);
   const [loading, setLoading] = useState(false); // Add loading state
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
   const handleGroupClick = (groupId, catId) => {
     //alert('Join Clicked');
     navigate(`/groupinvite?id=${groupId}&catId=${catId}`);
     //navigate(`/groupinvite/${groupId}/${catId}`);
   };
 
+  const adsenseClient = link.adsenseClient;
+  const adsenseSlot = link.adsenseSlot;
 
   useEffect(() => {
-       fetchDataFromAPI();
-       if (searchQuery !== null) {
-         fetchDataFromAPI();
-       }
-      }, [searchQuery]); 
+    fetchDataFromAPI();
+    if (searchQuery !== null) {
+      fetchDataFromAPI();
+    }
+  }, [searchQuery]);
 
+  useEffect(() => {
+    if (window.adsbygoogle && process.env.NODE_ENV !== 'development') {
+      try {
+        window.adsbygoogle.push({});
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, []);
 
   const fetchDataFromAPI = async () => {
     
@@ -228,9 +242,6 @@ export default function Home() {
       ? description.substring(0, 25) + "..."
       : description;
   };
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -812,7 +823,7 @@ export default function Home() {
             <section className="intro-section">
               <p>
                 Group Godown is the perfect place to find out active WhatsApp groups from around the world.
-                Whether you’re interested in general WhatsApp groups, Girls WhatsApp groups, or Indian groups, we’ve got you covered.
+                Whether you're interested in general WhatsApp groups, Girls WhatsApp groups, or Indian groups, we've got you covered.
                 Explore and join groups that match your interests, such as Share market WhatsApp group discussions, earning opportunities, 
                 YouTube subscribe WhatsApp group, and more.
               </p>
@@ -838,8 +849,8 @@ export default function Home() {
               <h2>How It Works?</h2>
               <ol>
                 <li>
-                  <strong>Search & Discover:</strong> Use our search function to find groups based on your interests or needs. Whether you’re looking for market discussions, 
-                  social groups, or specialized communities, we make it easy to discover what you’re looking for.
+                  <strong>Search & Discover:</strong> Use our search function to find groups based on your interests or needs. Whether you're looking for market discussions, 
+                  social groups, or specialized communities, we make it easy to discover what you're looking for.
                 </li>
                 <li>
                   <strong>Join & Engage:</strong> Once you find a group that suits your needs, simply click the link to join. Start engaging with like-minded individuals 
@@ -866,7 +877,7 @@ export default function Home() {
         <section className="intro-section">
           <p>
             Group Godown is the perfect place to find out active WhatsApp groups from around the world.
-            Whether you’re interested in general WhatsApp groups, Girls WhatsApp groups, or Indian groups, we’ve got you covered.
+            Whether you're interested in general WhatsApp groups, Girls WhatsApp groups, or Indian groups, we've got you covered.
             Explore and join groups that match your interests, such as Share market WhatsApp group discussions, earning opportunities, 
             YouTube subscribe WhatsApp group, and more.
           </p>
@@ -892,8 +903,8 @@ export default function Home() {
           <h2>How It Works?</h2>
           <ol>
             <li>
-              <strong>Search & Discover:</strong> Use our search function to find groups based on your interests or needs. Whether you’re looking for market discussions, 
-              social groups, or specialized communities, we make it easy to discover what you’re looking for.
+              <strong>Search & Discover:</strong> Use our search function to find groups based on your interests or needs. Whether you're looking for market discussions, 
+              social groups, or specialized communities, we make it easy to discover what you're looking for.
             </li>
             <li>
               <strong>Join & Engage:</strong> Once you find a group that suits your needs, simply click the link to join. Start engaging with like-minded individuals 
@@ -920,7 +931,17 @@ export default function Home() {
     </div>
   </div>
 </div>
-
+{/* Google AdSense Responsive Ad Unit */}
+{/*
+<div style={{ width: '100%', display: 'flex', justifyContent: 'center', margin: '24px 0' }}>
+  <ins className="adsbygoogle"
+    style={{ display: 'block', width: '100%', maxWidth: 728, minHeight: 90 }}
+    data-ad-client={adsenseClient}
+    data-ad-slot={adsenseSlot}
+    data-ad-format="auto"
+    data-full-width-responsive="true"></ins>
+</div>
+*/}
     </>
   );
 }
