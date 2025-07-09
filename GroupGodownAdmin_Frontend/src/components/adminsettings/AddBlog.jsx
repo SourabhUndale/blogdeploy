@@ -31,12 +31,13 @@ const AddBlog = () => {
       });
       setBlogs(response.data);
     } catch (error) {
-      console.error("Error fetching blogs:", error);
+      // console.error("Error fetching blogs:", error);
     }
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    // const cleanedValue = value.replace(/-/g, '');
     setFormData({ ...formData, [name]: value });
   };
 
@@ -72,7 +73,7 @@ const AddBlog = () => {
         date: "",
       });
     } catch (error) {
-      console.error("Error posting blog:", error);
+      // console.error("Error posting blog:", error);
       alert("Failed to post blog.");
     }
   };
@@ -83,7 +84,7 @@ const AddBlog = () => {
       alert("Blog deleted successfully!");
       fetchBlogs();
     } catch (error) {
-      console.error("Error deleting blog:", error);
+      // console.error("Error deleting blog:", error);
       alert("Failed to delete blog.");
     }
   };
@@ -94,7 +95,10 @@ const AddBlog = () => {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Title */}
         <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="title"
+            className="block text-sm font-medium text-gray-700"
+          >
             Title
           </label>
           <input
@@ -103,6 +107,11 @@ const AddBlog = () => {
             name="title"
             value={formData.title}
             onChange={handleInputChange}
+            onKeyDown={(e) => {
+              if (e.key === "-") {
+                e.preventDefault(); // Block "-" character
+              }
+            }}
             required
             className="mt-1 block w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
           />
@@ -110,7 +119,10 @@ const AddBlog = () => {
 
         {/* Rich Text Editor for Description */}
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="description"
+            className="block text-sm font-medium text-gray-700"
+          >
             Description
           </label>
           <ReactQuill
@@ -123,7 +135,10 @@ const AddBlog = () => {
 
         {/* ImageFile */}
         <div>
-          <label htmlFor="imageFile" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="imageFile"
+            className="block text-sm font-medium text-gray-700"
+          >
             Image File
           </label>
           <input
@@ -133,12 +148,16 @@ const AddBlog = () => {
             onChange={handleFileChange}
             accept="image/*"
             className="mt-1 block w-full text-gray-500 file:mr-4 file:py-2 file:px-4 file:border file:rounded-md file:border-gray-300 file:bg-gray-50 file:text-sm hover:file:bg-gray-100"
+            required
           />
         </div>
 
         {/* Date */}
         <div>
-          <label htmlFor="date" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="date"
+            className="block text-sm font-medium text-gray-700"
+          >
             Date
           </label>
           <input
@@ -170,7 +189,7 @@ const AddBlog = () => {
           <thead>
             <tr>
               <th className="border border-gray-300 px-4 py-2">Title</th>
-              <th className="border border-gray-300 px-4 py-2">Description</th>
+              {/* <th className="border border-gray-300 px-4 py-2">Description</th> */}
               <th className="border border-gray-300 px-4 py-2">Date</th>
               <th className="border border-gray-300 px-4 py-2">Actions</th>
             </tr>
@@ -178,12 +197,16 @@ const AddBlog = () => {
           <tbody>
             {blogs.map((blog) => (
               <tr key={blog.id}>
-                <td className="border border-gray-300 px-4 py-2">{blog.title}</td>
-                <td
+                <td className="border border-gray-300 px-4 py-2">
+                  {blog.title}
+                </td>
+                {/* <td
                   className="border border-gray-300 px-4 py-2"
                   dangerouslySetInnerHTML={{ __html: blog.description }} // Render HTML content
-                ></td>
-                <td className="border border-gray-300 px-4 py-2">{blog.date}</td>
+                ></td> */}
+                <td className="border border-gray-300 px-4 py-2">
+                  {blog.date}
+                </td>
                 <td className="border border-gray-300 px-4 py-2">
                   <button
                     onClick={() => handleDelete(blog.id)}

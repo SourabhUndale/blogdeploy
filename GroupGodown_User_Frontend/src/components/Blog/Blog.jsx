@@ -20,11 +20,11 @@ const Blog = () => {
     useEffect(() => {
         axios.get(`${baseUri}api/Blog`)
             .then(response => {
-                console.log(response.data);
+                // console.log(response.data);
                 setData(response.data);
             })
             .catch(err => {
-                console.error('Error fetching data:', err);
+                // console.error('Error fetching data:', err);
                 setError('Failed to fetch data');
             })
             .finally(() => {

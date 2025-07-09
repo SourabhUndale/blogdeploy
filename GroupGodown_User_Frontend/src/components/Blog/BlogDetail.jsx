@@ -21,7 +21,7 @@ const BlogDetail = () => {
                 setPost(response.data);
             })
             .catch(err => {
-                console.error('Error fetching data:', err);
+                // console.error('Error fetching data:', err);
                 setError('Failed to fetch blog details');
             })
             .finally(() => setLoading(false));
