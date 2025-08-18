@@ -73,6 +73,17 @@ function JoinGroup() {
           </p>
           <h4>Click on bellow button to join whatsapp group</h4>
           <h5>You will be redirected to group in whatsapp...</h5>
+          
+          {/* Ad above the Join Group Now button */}
+          <div style={{ width: '100%', display: 'flex', justifyContent: 'center', margin: '24px 0' }}>
+            <ins className="adsbygoogle"
+              style={{ display: 'block', width: '100%', maxWidth: 728, minHeight: 90 }}
+              data-ad-client={adsenseClient}
+              data-ad-slot={adsenseSlot}
+              data-ad-format="auto"
+              data-full-width-responsive="true"></ins>
+          </div>
+          
           <div className="d-flex justify-content-center p-3">
             <button
               className="btn btn-primary btn-lg"
@@ -86,19 +97,19 @@ function JoinGroup() {
               Join Group Now
             </button>
           </div>
+          
+          {/* Ad below the Join Group Now button */}
+          <div style={{ width: '100%', display: 'flex', justifyContent: 'center', margin: '24px 0' }}>
+            <ins className="adsbygoogle"
+              style={{ display: 'block', width: '100%', maxWidth: 728, minHeight: 90 }}
+              data-ad-client={adsenseClient}
+              data-ad-slot={adsenseSlot}
+              data-ad-format="auto"
+              data-full-width-responsive="true"></ins>
+          </div>
         </div>
       </div>
-      {/* Google AdSense Responsive Ad Unit */}
-      {/*
-      <div style={{ width: '100%', display: 'flex', justifyContent: 'center', margin: '24px 0' }}>
-        <ins className="adsbygoogle"
-          style={{ display: 'block', width: '100%', maxWidth: 728, minHeight: 90 }}
-          data-ad-client={adsenseClient}
-          data-ad-slot={adsenseSlot}
-          data-ad-format="auto"
-          data-full-width-responsive="true"></ins>
-      </div>
-      */}
+     
     </div>
   );
 }

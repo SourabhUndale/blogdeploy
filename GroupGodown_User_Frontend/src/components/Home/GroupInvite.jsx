@@ -70,7 +70,7 @@ function GroupInvite() {
 
   const handleGroupClick = (groupId, catId) => {
     //alert('Join Clicked');
-    navigate(`/groupinvite?id=${groupId}&catId=${catId}`);
+    window.open(`/groupinvite?id=${groupId}&catId=${catId}`, "_blank");
     window.scrollTo(0,0);
   };
 
@@ -192,11 +192,12 @@ function GroupInvite() {
             <button
               className="btn btn-primary"
               onClick={() => {
-                navigate(
+                window.open(
                   "/joingroup/" +
                     singlegroup.groupLink.substring(
                       singlegroup.groupLink.lastIndexOf("/") + 1
-                    )
+                    ),
+                  "_blank"
                 );
               }}
             >
@@ -285,133 +286,137 @@ function GroupInvite() {
       </div>
 
       <h5 className="mt-5 text-center">Related Groups</h5>
-      {relatedData.map((rData) => (
-        <div className="mt-4 mb-4 d-flex justify-content-center">
-          <div className="card card_w">
-            <div className="card-body">
-              <img
-                src={rData.groupImage}
-                onError={(e) => {
-                  e.target.src = replacelogo; // Replace with your default image URL
-                }}
-                width={"8%"}
-                className="rounded-circle"
-              />
-              <div className="heading-div">
-                <h5>
-                  <a
-                    href=""
-                    className="text-black text-decoration-none fw-bold underline"
-                    onClick={() => {
-                      event.preventDefault();
-                      handleGroupClick(rData.groupId, rData.catId);
-                    }}
-                  >
-                    {rData.groupName}
-                  </a>
-                </h5>
-                <div>
-                  <a
-                    href=""
-                    className="text-decoration-none text-secondary underline"
-                  >
-                    <i class="bi bi-list"></i> {rData.catName}
-                  </a>
-                  <a
-                    href=""
-                    className="text-decoration-none text-secondary underline"
-                  >
-                    <i class="bi bi-globe"></i> {rData.country}
-                  </a>
-                  <a
-                    href=""
-                    className="text-decoration-none text-secondary underline"
-                  >
-                    <i class="bi bi-translate"></i> {rData.language}
-                  </a>
+      {relatedData.map((rData, index) => (
+        <React.Fragment key={rData.groupId}>
+          <div className="mt-4 mb-4 d-flex justify-content-center">
+            <div className="card card_w">
+              <div className="card-body">
+                <img
+                  src={rData.groupImage}
+                  onError={(e) => {
+                    e.target.src = replacelogo; // Replace with your default image URL
+                  }}
+                  width={"8%"}
+                  className="rounded-circle"
+                />
+                <div className="heading-div">
+                  <h5>
+                    <a
+                      href=""
+                      className="text-black text-decoration-none fw-bold underline"
+                      onClick={() => {
+                        event.preventDefault();
+                        handleGroupClick(rData.groupId, rData.catId);
+                      }}
+                    >
+                      {rData.groupName}
+                    </a>
+                  </h5>
+                  <div>
+                    <a
+                      href=""
+                      className="text-decoration-none text-secondary underline"
+                    >
+                      <i class="bi bi-list"></i> {rData.catName}
+                    </a>
+                    <a
+                      href=""
+                      className="text-decoration-none text-secondary underline"
+                    >
+                      <i class="bi bi-globe"></i> {rData.country}
+                    </a>
+                    <a
+                      href=""
+                      className="text-decoration-none text-secondary underline"
+                    >
+                      <i class="bi bi-translate"></i> {rData.language}
+                    </a>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div>
-              <p className="text-right ps-4 pe-4">
+              <div>
+                <p className="text-right ps-4 pe-4">
+                  <a
+                    href=""
+                    className="text-decoration-none text-black underline"
+                  >
+                    {truncateDescription(rData.groupDesc)}
+                  </a>
+                  {rData.groupDesc.length > 25 && (
+                    <Link
+                      className="text-decoration-none underline"
+                      onClick={() => {
+                        event.preventDefault();
+                        handleGroupClick(rData.groupId, rData.catId);
+                      }}
+                    >
+                      Read more
+                    </Link>
+                  )}
+                </p>
+                <hr />
+              </div>
+              <div className="ps-4 pe-4 d-flex justify-content-between">
                 <a
                   href=""
-                  className="text-decoration-none text-black underline"
+                  className="text-decoration-none text-black fw-bold fs-5 underline"
+                  onClick={() => {
+                    event.preventDefault();
+                    handleGroupClick(rData.groupId, rData.catId);
+                  }}
                 >
-                  {truncateDescription(rData.groupDesc)}
+                  Join Group
                 </a>
-                {rData.groupDesc.length > 25 && (
-                  <Link
-                    className="text-decoration-none underline"
-                    onClick={() => {
-                      event.preventDefault();
-                      handleGroupClick(rData.groupId, rData.catId);
-                    }}
-                  >
-                    Read more
-                  </Link>
-                )}
-              </p>
-              <hr />
-            </div>
-            <div className="ps-4 pe-4 d-flex justify-content-between">
-              <a
-                href=""
-                className="text-decoration-none text-black fw-bold fs-5 underline"
-                onClick={() => {
-                  event.preventDefault();
-                  handleGroupClick(rData.groupId, rData.catId);
-                }}
-              >
-                Join Group
-              </a>
-              <p className="social-icons-p d-flex align-items-center fs-5">
-                Share on :{" "}
-                <div className="social-icons-div ">
-                  <a
-                    href=""
-                    onClick={() => {
-                      shareOnWhatsApp(rData.groupLink);
-                    }}
-                  >
-                    <i className="bi bi-whatsapp text-success"></i>
-                  </a>
-                  <a
-                    href=""
-                    onClick={() => {
-                      shareOnInstagram(rData.groupLink);
-                    }}
-                  >
-                    <i
-                      className="bi bi-instagram"
-                      style={{ color: "rgb(214 0 255)" }}
-                    ></i>
-                  </a>
-                  <a
-                    href=""
-                    onClick={() => {
-                      shareOnTelegram(rData.groupLink);
-                    }}
-                  >
-                    <i className="bi bi-telegram"></i>
-                  </a>
-                </div>
-              </p>
+                <p className="social-icons-p d-flex align-items-center fs-5">
+                  Share on :{" "}
+                  <div className="social-icons-div ">
+                    <a
+                      href=""
+                      onClick={() => {
+                        shareOnWhatsApp(rData.groupLink);
+                      }}
+                    >
+                      <i className="bi bi-whatsapp text-success"></i>
+                    </a>
+                    <a
+                      href=""
+                      onClick={() => {
+                        shareOnInstagram(rData.groupLink);
+                      }}
+                    >
+                      <i
+                        className="bi bi-instagram"
+                        style={{ color: "rgb(214 0 255)" }}
+                      ></i>
+                    </a>
+                    <a
+                      href=""
+                      onClick={() => {
+                        shareOnTelegram(rData.groupLink);
+                      }}
+                    >
+                      <i className="bi bi-telegram"></i>
+                    </a>
+                  </div>
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+          
+          {/* Ad after every 2 related groups */}
+          {(index + 1) % 2 === 0 && (
+            <div style={{ width: '100%', display: 'flex', justifyContent: 'center', margin: '24px 0' }}>
+              <ins className="adsbygoogle"
+                style={{ display: 'block', width: '100%', maxWidth: 728, minHeight: 90 }}
+                data-ad-client={adsenseClient}
+                data-ad-slot={adsenseSlot}
+                data-ad-format="auto"
+                data-full-width-responsive="true"></ins>
+            </div>
+          )}
+        </React.Fragment>
       ))}
-      {/* Google AdSense Responsive Ad Unit */}
-      {/*
-      <div style={{ width: '100%', display: 'flex', justifyContent: 'center', margin: '24px 0' }}>
-        <ins className="adsbygoogle"
-          style={{ display: 'block', width: '100%', maxWidth: 728, minHeight: 90 }}
-          data-ad-client={adsenseClient}
-          data-ad-slot={adsenseSlot}
-          data-ad-format="auto"
-          data-full-width-responsive="true"></ins>
-      </div>
-      */}
+     
     </div>
   );
 }
