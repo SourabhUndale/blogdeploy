@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 import baselinks from "../../../baselinks.json";
 import Button from '@mui/material/Button';
@@ -21,7 +21,7 @@ async function fetchData() {
     };
   
     let response = await fetch(
-      `${baseUri}odata/Groups?$expand=Reports,Application&$filter=Pin eq false`,
+      `${baseUri}odata/Groups?$expand=Reports,Application,Category&$filter=Pin eq false`,
       {
         method: "GET",
         headers: headersList,
@@ -29,14 +29,14 @@ async function fetchData() {
     );
   
     const res = await response.json();
-    console.log(res);
+    //console.log(res);
     return res ? res.value : [];
   } catch (error) {
     if(error.response.status === 401)
     {
       window.location = '/';
     }
-    console.error("Error",error);
+    //console.error("Error",error);
   }
 }
 
@@ -48,6 +48,8 @@ function NormalGroupsTable() {
   const [data, setData] = useState([]);
   const [jwtToken, setJwtToken] = useState();
   const [searchQuery, setSearchQuery] = useState("");
+  const [goToPage, setGoToPage] = useState("");
+  const [itemsPerPage, setItemsPerPage] = useState(perPageitem);
 
   const handleClickOpen = (groupId) => {
     setOpen(true);
@@ -69,10 +71,7 @@ function NormalGroupsTable() {
   useEffect(() => {
     async function getData() {
       const result = await fetchData();
-      // Filter out groups with reports
-      // const groupsWithReports = result.filter(
-      //   (group) => group.Reports.length > 0
-      // );
+     
       setData(result);
 
     }
@@ -82,7 +81,7 @@ function NormalGroupsTable() {
   const pinGroup = async () => {
     try{
       const response = await axios.put(
-        `${baseUri}api/Groups/Pin?id=${groupIdToPin}`,
+        `${baseUri}groups/Pin?id=${groupIdToPin}`,
         {id : groupIdToPin},
         {
           headers: {
@@ -91,11 +90,11 @@ function NormalGroupsTable() {
         }
       );
 
-      console.log(groupIdToPin);
+      //console.log(groupIdToPin);
 
       if(response.data)
       {
-        alert("Group Pinned");
+        // alert("Group Pinned"); // Removed alert
         fetchData().then((result) => {
           setData(result);
         });
@@ -109,15 +108,14 @@ function NormalGroupsTable() {
       {
         window.location = '/';
       }
-      console.error("Error",error);
+      //console.error("Error",error);
     }
   }
 
-  // console.log(data);
+  // //console.log(data);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = perPageitem;
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -128,14 +126,57 @@ function NormalGroupsTable() {
     setCurrentPage(1);
   };
 
-  const filteredData = data.filter((item) =>
-    item.groupName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleItemsPerPageChange = useCallback((event) => {
+    setItemsPerPage(parseInt(event.target.value));
+    setCurrentPage(1); // Reset current page when changing items per page
+  }, []);
 
-  const numPages =
-    Math.ceil(filteredData.length / itemsPerPage) < 1
+  const handleGoToPageChange = (e) => {
+    setGoToPage(e.target.value.replace(/[^0-9]/g, ""));
+  };
+
+  const handleGoToPage = () => {
+    const page = parseInt(goToPage, 10);
+    if (!isNaN(page) && page >= 1 && page <= numPages) {
+      setCurrentPage(page);
+    }
+    setGoToPage("");
+  };
+
+  const handleGoToPageKeyDown = (e) => {
+    if (e.key === "Enter") {
+      handleGoToPage();
+    }
+  };
+
+  const filteredData = useMemo(() => {
+    return data.filter((item) =>
+      item.groupName.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [data, searchQuery]);
+
+  const numPages = useMemo(() => {
+    return Math.ceil(filteredData.length / itemsPerPage) < 1
       ? 1
       : Math.ceil(filteredData.length / itemsPerPage);
+  }, [filteredData, itemsPerPage]);
+
+  // Helper to generate pagination array
+  const getPagination = useCallback(() => {
+    const pages = [];
+    if (numPages <= 3) {
+      for (let i = 1; i <= numPages; i++) pages.push(i);
+    } else {
+      if (currentPage === 1) {
+        pages.push(1, 2, 3);
+      } else if (currentPage === numPages) {
+        pages.push(numPages - 2, numPages - 1, numPages);
+      } else {
+        pages.push(currentPage - 1, currentPage, currentPage + 1);
+      }
+    }
+    return pages;
+  }, [numPages, currentPage]);
 
   return (
     <>
@@ -180,72 +221,58 @@ function NormalGroupsTable() {
                   <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-center">
                     <thead className="bg-gray-50 dark:bg-gray-700">
                       <tr>
-                        {/* <th scope="col" className="py-3 px-4 pe-0">
-                          <div className="flex items-center h-5">
-                            <input
-                              id="hs-table-pagination-checkbox-all"
-                              type="checkbox"
-                              className="border-gray-200 rounded text-blue-600 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:checked:bg-blue-500 dark:checked:border-blue-500 dark:focus:ring-offset-gray-800"
-                            />
-                            <label
-                              for="hs-table-pagination-checkbox-all"
-                              className="sr-only"
-                            >
-                              Checkbox
-                            </label>
-                          </div>
-                        </th> */}
+                    
                         <th
                           scope="col"
-                          className="px-6 py-3 text-xs font-medium text-gray-500 uppercase"
+                          className="px-6 py-3 text-xs font-medium text-white uppercase"
                         >
                           Sr.no.
                         </th>
                         <th
                           scope="col"
-                          className="px-6 py-3 text-xs font-medium text-gray-500 uppercase"
+                          className="px-6 py-3 text-xs font-medium text-white uppercase"
                         >
                           Group Name
                         </th>
                         <th
                           scope="col"
-                          className="px-6 py-3 text-xs font-medium text-gray-500 uppercase"
+                          className="px-6 py-3 text-xs font-medium text-white uppercase"
                         >
                           Group Links
                         </th>
                         <th
                           scope="col"
-                          className="px-6 py-3 text-xs font-medium text-gray-500 uppercase"
+                          className="px-6 py-3 text-xs font-medium text-white uppercase"
                         >
                           Group Category
                         </th>
                         <th
                           scope="col"
-                          className="px-6 py-3 text-xs font-medium text-gray-500 uppercase"
+                          className="px-6 py-3 text-xs font-medium text-white uppercase"
                         >
                           Country
                         </th>
                         <th
                           scope="col"
-                          className="px-6 py-3 text-xs font-medium text-gray-500 uppercase"
+                          className="px-6 py-3 text-xs font-medium text-white uppercase"
                         >
                           Language
                         </th>
                         <th
                           scope="col"
-                          className="px-6 py-3 text-xs font-medium text-gray-500 uppercase"
+                          className="px-6 py-3 text-xs font-medium text-white uppercase"
                         >
                           Application Type
                         </th>
                         <th
                           scope="col"
-                          className="px-6 py-3 text-xs font-medium text-gray-500 uppercase"
+                          className="px-6 py-3 text-xs font-medium text-white uppercase"
                         >
                           Reports Count
                         </th>
                         <th
                           scope="col"
-                          className="px-6 py-3 text-xs font-medium text-gray-500 uppercase"
+                          className="px-6 py-3 text-xs font-medium text-white uppercase"
                         >
                           Pin/Unpin Group
                         </th>
@@ -262,46 +289,32 @@ function NormalGroupsTable() {
                             (currentPage - 1) * itemsPerPage + index + 1;
                           return (
                             <tr key={index}>
-                              {/* <td className="py-3 ps-4">
-                                <div className="flex items-center h-5">
-                                  <input
-                                    id={`hs-table-pagination-checkbox-1${serialNumber}`}
-                                    type="checkbox"
-                                    className="border-gray-200 rounded text-blue-600 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:checked:bg-blue-500 dark:checked:border-blue-500 dark:focus:ring-offset-gray-800"
-                                  />
-                                  <label
-                                    htmlFor={`hs-table-pagination-checkbox-1 ${serialNumber}`}
-                                    className="sr-only"
-                                  >
-                                    Checkbox
-                                  </label>
-                                </div>
-                              </td> */}
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-200">
+                           
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-black">
                                 {serialNumber}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
                                 {normalGroups.groupName}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
-                                <a href="#">{normalGroups.groupLink}</a>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
+                                <a className="text-black" href={normalGroups.groupLink} target="_blank" rel="noopener noreferrer">{normalGroups.groupLink}</a>
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
-                                {normalGroups.catId}
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
+                                {normalGroups.Category.catName}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
                                 {normalGroups.country}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
                                 {normalGroups.Language}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
                                 {normalGroups.Application.appName}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
                                 {normalGroups.Reports.length}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
                                 <button
                                   type="button"
                                   className="text-white bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-red-300 dark:focus:ring-red-800 shadow-lg shadow-red-500/50 dark:shadow-lg dark:shadow-red-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2"
@@ -317,11 +330,11 @@ function NormalGroupsTable() {
                                   aria-describedby="alert-dialog-description"
                                 >
                                   <DialogTitle id="alert-dialog-title">
-                                    {"Pin Group"}
+                                    {"Confirm Pin Group"}
                                   </DialogTitle>
                                   <DialogContent>
                                     <DialogContentText id="alert-dialog-description">
-                                      Click on 'Yes' to pin group else 'No'
+                                      Do you really want to pin this group?
                                     </DialogContentText>
                                   </DialogContent>
                                   <DialogActions>
@@ -341,49 +354,84 @@ function NormalGroupsTable() {
                   </table>
                 </div>
                 <div className="py-1 px-4">
-                  <nav className="flex items-center space-x-1">
-                    <button
-                      type="button"
-                      className="p-2.5 inline-flex items-center gap-x-2 text-sm rounded-full text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none dark:text-white dark:hover:bg-white/10 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
-                      onClick={() =>
-                        handlePageChange(
-                          currentPage - 1 > 0 ? currentPage - 1 : 1
-                        )
-                      }
-                      disabled={currentPage === 1}
-                    >
-                      <span aria-hidden="true">«</span>
-                      <span className="sr-only">Previous</span>
-                    </button>
-                    {Array.from({
-                      length: numPages,
-                    }).map((_, index) => (
+                  <nav className="flex flex-wrap items-center justify-between w-full">
+                    {/* Left: Pagination */}
+                    <div className="flex items-center space-x-1">
                       <button
                         type="button"
-                        className={`min-w-[40px] flex justify-center items-center text-gray-800 hover:bg-gray-100 py-2.5 text-sm rounded-full disabled:opacity-50 disabled:pointer-events-none dark:text-white dark:hover:bg-white/10 ${
-                          currentPage === index + 1 ? "active" : ""
-                        }`}
-                        onClick={() => handlePageChange(index + 1)}
+                        className="p-2.5 inline-flex items-center gap-x-2 text-sm rounded-full text-gray-800 bg-gray-200 dark:text-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:pointer-events-none dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
+                        onClick={() =>
+                          handlePageChange(
+                            currentPage - 1 > 0 ? currentPage - 1 : 1
+                          )
+                        }
+                        disabled={currentPage === 1}
                       >
-                        {index + 1}
+                        <span aria-hidden="true">«</span>
+                        <span className="sr-only">Previous</span>
                       </button>
-                    ))}
-
-                    <button
-                      type="button"
-                      className="p-2.5 inline-flex items-center gap-x-2 text-sm rounded-full text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none dark:text-white dark:hover:bg-white/10 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
-                      onClick={() =>
-                        handlePageChange(
-                          currentPage + 1 <= numPages
-                            ? currentPage + 1
-                            : numPages
+                      {getPagination().map((page, idx) =>
+                        page === "..." ? (
+                          <span key={"ellipsis-" + idx} className="px-2">...</span>
+                        ) : (
+                          <button
+                            key={page}
+                            type="button"
+                            className={`min-w-[40px] flex justify-center items-center text-gray-800 bg-gray-200 dark:text-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 py-2.5 text-sm rounded-full disabled:opacity-50 disabled:pointer-events-none ${
+                              currentPage === page ? "bg-blue-500 text-white dark:bg-blue-400 dark:text-gray-900" : ""
+                            }`}
+                            onClick={() => handlePageChange(page)}
+                            disabled={currentPage === page}
+                          >
+                            {page}
+                          </button>
                         )
-                      }
-                      disabled={currentPage === numPages}
-                    >
-                      <span className="sr-only">Next</span>
-                      <span aria-hidden="true">»</span>
-                    </button>
+                      )}
+                      <button
+                        type="button"
+                        className="p-2.5 inline-flex items-center gap-x-2 text-sm rounded-full text-gray-800 bg-gray-200 dark:text-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:pointer-events-none dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
+                        onClick={() =>
+                          handlePageChange(
+                            currentPage + 1 <= numPages
+                              ? currentPage + 1
+                              : numPages
+                          )
+                        }
+                        disabled={currentPage === numPages}
+                      >
+                        <span className="sr-only">Next</span>
+                        <span aria-hidden="true">»</span>
+                      </button>
+                    </div>
+                    {/* Right: Go to page and dropdown */}
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="text"
+                        value={goToPage}
+                        onChange={handleGoToPageChange}
+                        onKeyDown={handleGoToPageKeyDown}
+                        placeholder="Go to page"
+                        className="w-20 p-2 border rounded text-sm text-gray-800 focus:ring-1 focus:ring-gray-600"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleGoToPage}
+                        className="px-3 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                      >
+                        Go
+                      </button>
+                      <select
+                        value={itemsPerPage}
+                        onChange={handleItemsPerPageChange}
+                        className="p-2.5 border rounded text-sm text-gray-800 focus:ring-1 focus:ring-gray-600"
+                      >
+                        {[10, 20, 30, 40, 50].map((perPageOption) => (
+                          <option key={perPageOption} value={perPageOption}>
+                            {perPageOption} per page
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </nav>
                 </div>
               </div>

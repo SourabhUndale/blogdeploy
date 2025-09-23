@@ -1,6 +1,6 @@
 import React from "react";
 import "./Home.css";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import metaImage from "../data/ggLogo.jpeg"
 import link from "../../../link.json";
@@ -8,6 +8,9 @@ import link from "../../../link.json";
 function JoinGroup() {
   // All hooks at the top
   let { grouplink } = useParams();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const groupName = searchParams.get("groupName") || "WhatsApp Group";
   const adsenseClient = link.adsenseClient;
   const adsenseSlot = link.adsenseSlot;
   React.useEffect(() => {
@@ -15,7 +18,7 @@ function JoinGroup() {
       try {
         window.adsbygoogle.push({});
       } catch (e) {
-        // ignore
+        // ignorez
       }
     }
   }, []);
@@ -25,15 +28,26 @@ function JoinGroup() {
     <div className="d-flex justify-content-center ">
       
       <Helmet>
-        <title>WhatsApp Group Links | Join Indian & Girls WhatsApp Groups | groupgodown.com</title>
-        <meta property="og:title" content="WhatsApp Group Links | Join Indian & Girls WhatsApp Groups"/>
-        <meta property="og:site_name" content="Group Godown"/>
-        <meta property="og:url" content="https://www.groupgodown.com/"/>
-        <meta property="og:description" content="Join the best WhatsApp groups to connect with like-minded people! Discover how to promote your WhatsApp group and increase group members easily. Explore top groups today!" />
-        <meta property="og:type" content="website"/>
+        <title>
+          {`${groupName} | WhatsApp Group Link | ${
+            window.location.hostname.replace(/^www\./, '').split('.')[0].replace(/^\w/, c => c.toUpperCase())
+          }`}
+        </title>
+       
+        <meta property="og:title" content={`${groupName} | Join WhatsApp Group`} />
+        <meta property="og:site_name" content="Group Godwon" />
+        <meta property="og:url" content={window.location.href} />
+        <meta 
+          property="og:description" 
+          content={`Join the ${groupName} WhatsApp group and connect with like-minded people. Explore more active WhatsApp groups on GroupGodwon!`} 
+        />
+        <meta property="og:type" content="website" />
         <meta property="og:image" content={metaImage}></meta>
         <meta property="og:locale" content="en_US" />
-        <meta name="description" content="Enjoy connecting with people" />
+        <meta 
+          name="description" 
+          content={`Join the ${groupName} WhatsApp group and connect with friends. Discover more active WhatsApp groups on GroupGodwon!`} 
+        />  
       </Helmet>
 
       <div className="col-12 p-3">
@@ -106,6 +120,29 @@ function JoinGroup() {
               data-ad-slot={adsenseSlot}
               data-ad-format="auto"
               data-full-width-responsive="true"></ins>
+          </div>
+          <hr className="my-4 " />
+          <div className="p-3">
+            <h4>Benefits for Users</h4>
+            <p>
+              Joining groups on GroupGodown is great for you! You can meet new people, learn skills, and grow your business. Farmers can sell produce directly, students can get study tips, and businesses can find new customers. With 99.99% active WhatsApp group links, you’ll always connect with lively communities!
+            </p>
+            <h4>Follow Group Rules</h4>
+            <p>
+              Every group has its own rules. Before joining or after, ask the admin about WhatsApp group guidelines. Follow them to keep the group friendly and safe for everyone.
+            </p>
+            <h4>How to Leave a Group</h4>
+            <p>
+              Want to leave a group? Open WhatsApp, tap the group name, scroll down, and hit “Exit Group.” It’s simple, and you can join new groups anytime on GroupGodown!
+            </p>
+            <h4>Protect Privacy</h4>
+            <p>
+              Keep your privacy and others’ safe! Don’t share personal info like phone numbers or addresses unless necessary. Respect others’ privacy too for a secure experience on GroupGodown.
+            </p>
+            <h4>Share GroupGodown with Others</h4>
+            <p>
+              Love GroupGodown? Spread the word! Share our link (<a href="https://www.groupgodown.com">https://www.groupgodown.com</a>) with friends and family so they can join active WhatsApp groups too. Help our community grow!
+            </p>
           </div>
         </div>
       </div>

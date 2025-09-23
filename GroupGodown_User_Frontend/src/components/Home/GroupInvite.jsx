@@ -5,8 +5,8 @@ import { Helmet } from "react-helmet-async";
 import useDataFetch from "../../useDataFetch";
 import link from "../../../link.json";
 import axios from "axios";
-import { useSearch } from "../../SearchContext";
-import replacelogo from "/ggLogo.jpeg"
+import Loader from "../Loader/Loader";
+import replacelogo from "/ggLogo.jpeg";
   
 function GroupInvite() {
   // All hooks at the top
@@ -17,11 +17,13 @@ function GroupInvite() {
   const obaseUri = JSON.parse(JSON.stringify(link));
   const baseUri = obaseUri.DefaultbaseUri;
   const defualtgroupImg = obaseUri.defaultgroupImg;
-  const { data: singlegroup } = useDataFetch(`${baseUri}api/Groups/` + id, []);
+  const { data: singlegroup, loading: singleGroupLoading } = useDataFetch(`${baseUri}odata/Groups(${id})?$expand=Category`, []);
+  
   const { data: relatedData } = useDataFetch(
-    `${baseUri}api/Groups/id/Groups?catId=${catId}`,
+    `${baseUri}odata/Groups?$filter=Category/catId eq ${catId}&$expand=Category`,
     []
   );
+  
   const [reasonCategory, setReasonCategory] = useState("");
   const [reasonCategoryError, setreasonCategoryError] = useState("");
   const [reasonDetailsError, setreasonDetailsError] = useState("");
@@ -29,6 +31,20 @@ function GroupInvite() {
   const adsenseClient = link.adsenseClient;
   const adsenseSlot = link.adsenseSlot;
   const navigate = useNavigate();
+  const [visibleGroups, setVisibleGroups] = useState(4);
+
+  // Helper to ensure absolute URLs
+  const getAbsoluteImageUrl = (relativePath) => {
+    if (!relativePath) return '';
+    if (relativePath.startsWith('http') || relativePath.startsWith('//')) {
+      return relativePath; // Already absolute
+    }
+    // For backend-served images, prepend baseUri
+    return `${baseUri.endsWith('/') ? baseUri : baseUri + '/'}${relativePath.startsWith('/') ? relativePath.substring(1) : relativePath}`;
+  };
+
+  const absoluteGroupImage = getAbsoluteImageUrl(singlegroup?.groupImage);
+  
   useEffect(() => {
     if (window.adsbygoogle && process.env.NODE_ENV !== 'development') {
       try {
@@ -39,13 +55,18 @@ function GroupInvite() {
     }
   }, []);
 
+  if (singleGroupLoading) {
+    return <Loader />;
+  }
+
+  if (!singlegroup || !singlegroup.Category) {
+    return <div className="p-5 text-center">Group not found or category missing.</div>;
+  }
+
   const shareOnInstagram = (inWhatsapp) => {
     const currentUrl = window.location.href;
     const instaMessage = `Check out this link: ${currentUrl}`;
-    window.open(
-      `https://www.instagram.com/direct/new/?text=${instaMessage}`,
-      "_blank"
-    );
+    return `https://www.instagram.com/direct/new/?text=${instaMessage}`;
   };
 
   const shareOnWhatsApp = (whWhatsapp) => {
@@ -55,7 +76,7 @@ function GroupInvite() {
     const message = encodeURIComponent(
       `Join our WhatsApp group: ${whatsappMessage}`
     );
-    window.open(`https://wa.me/?text=${message}`, "_blank");
+    return `https://wa.me/?text=${message}`;
   };
 
   const shareOnTelegram = (teWhatsapp) => {
@@ -65,7 +86,7 @@ function GroupInvite() {
     const TelegramMessage = `Check out this link: ${currentUrl}`;
 
     //const message = encodeURIComponent(`Join our Telegram group: ${teWhatsapp}`);
-    window.open(`https://t.me/share/url?url=${TelegramMessage}`, "_blank");
+    return `https://t.me/share/url?url=${TelegramMessage}`;
   };
 
   const handleGroupClick = (groupId, catId) => {
@@ -75,7 +96,7 @@ function GroupInvite() {
   };
 
   const truncateDescription = (description) => {
-    return description.length > 25
+    return description && description.length > 25
       ? description.substring(0, 25) + "..."
       : description;
   };
@@ -132,86 +153,108 @@ function GroupInvite() {
 
        {/* Add dynamic Open Graph meta tags */}
        <Helmet>
-        <title>{singlegroup.groupName}</title>
-        <meta property="og:title" content={singlegroup.groupName} />
+      
+        <title>
+          {`${singlegroup?.groupName || 'Loading...'} | Join WhatsApp Group | ${
+            window.location.hostname.replace(/^www\./, '').split('.')[0].replace(/^\w/, c => c.toUpperCase())
+          }`}
+        </title>
+        <meta name="description" content={singlegroup?.groupDesc || 'Join and share WhatsApp groups from various categories, countries, and languages.'} />
+        <meta property="og:title" content={singlegroup?.groupName || 'Group Godown'} />
         <meta property="og:site_name" content="Group Godown" />
         <meta property="og:url" content={window.location.href} />
         <meta property="og:type" content="website" />
         <meta
           property="og:description"
-          content={singlegroup.groupDesc}
+          content={singlegroup?.groupDesc || 'Loading group description...'} 
         />
-        <meta property="og:image" content={singlegroup.groupImage || replacelogo} />
+        <meta property="og:image" content={absoluteGroupImage || `${window.location.origin}${replacelogo}`} />
         <meta property="og:locale" content="en_US" />
       </Helmet>
 
       <div className="d-flex justify-content-center flex-column border border-3 bg-light rounded">
         <div className="d-flex flex-column gap-2 align-items-center p-3">
           <img
-            src={singlegroup.groupImage}
+            src={absoluteGroupImage}
             onError={(e) => {
               e.target.src = replacelogo; // Replace with your default image URL
             }}
             width={"10%"}
             className="rounded-circle"
+            alt={singlegroup?.groupName || 'Group Image'}
           />
-          <p className="text-decoration-none text-wrap text-black fs-3 fw-bold mb-0">
-            {singlegroup.groupName}
-          </p>
+          <h1 className="text-decoration-none text-wrap text-black fs-3 fw-bold mb-0">
+            {singlegroup?.groupName}
+          </h1>
           <div className="d-flex gap-3">
-            <a
-              href=""
+            <Link
+              to={`/groups/category/${singlegroup?.Category?.catName}`}
               className="text-decoration-none text-secondary underline"
             >
               <i className="bi bi-list me-1"></i>
-              {singlegroup.catName}
-            </a>
-            <a
-              href=""
+              {singlegroup?.Category?.catName}
+            </Link>
+            <Link
+              to={`/groups/country/${singlegroup?.country}`}
               className="text-decoration-none text-secondary underline"
             >
               <i className="bi bi-globe me-1"></i>
-              {singlegroup.country}
-            </a>
-            <a
-              href=""
+              {singlegroup?.country}
+            </Link>
+            <Link
+              to={`/groups/language/${singlegroup?.Language}`}
               className="text-decoration-none text-secondary underline"
             >
               <i className="bi bi-translate me-1"></i>
-              {singlegroup.language}
-            </a>
+              {singlegroup?.Language}
+            </Link>
           </div>
           {/* <p>2024-01-12 12:09:20</p> */}
           <div
             className="border border-2 bg-light rounded p-2"
             style={{ width: "-webkit-fill-available" }}
           >
-            <p className="m-0">{singlegroup.groupDesc}</p>
+            <p className="m-0">{singlegroup?.groupDesc}</p>
           </div>
-          <div className="d-flex gap-3 p-2">
-            <button
-              className="btn btn-primary"
-              onClick={() => {
-                window.open(
-                  "/joingroup/" +
-                    singlegroup.groupLink.substring(
-                      singlegroup.groupLink.lastIndexOf("/") + 1
-                    ),
-                  "_blank"
-                );
-              }}
-            >
-              Join Group
-            </button>
-            <button
-              className="btn btn-success"
-              onClick={() => {
-                shareOnWhatsApp(singlegroup.groupLink);
-              }}
-            >
-              Share Group
-            </button>
-          </div>
+
+
+        {/* ✅ SEO-friendly dynamic description */}
+
+        <div className="group-invite__description">
+          <p>
+            The WhatsApp group <span className="highlight">{singlegroup?.groupName}</span> 
+            is a <span className="highlight">{singlegroup?.Language}</span> WhatsApp group. 
+            It is a <span className="highlight">{singlegroup?.Category?.catName}</span> WhatsApp group, 
+            and is a <span className="highlight">{singlegroup?.country}</span> WhatsApp group. 
+            To join this group click on <span className="highlight join-btn">'Join Group'</span> Button.
+          </p>
+        </div>
+
+
+
+        <div className="d-flex gap-3 p-2">
+        
+        <Link
+          className="btn btn-primary"
+          to={`/joingroup/${singlegroup?.groupLink.substring(
+            singlegroup?.groupLink.lastIndexOf("/") + 1
+          )}?groupName=${encodeURIComponent(singlegroup?.groupName)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Join Group
+        </Link>
+
+
+          <button
+            className="btn btn-success"
+            onClick={() => {
+              window.open(shareOnWhatsApp(singlegroup?.groupLink), "_blank");
+            }}
+          >
+            Share Group
+          </button>
+        </div>
         </div>
         <div className="ms-3">
           <p>
@@ -274,7 +317,7 @@ function GroupInvite() {
                   data-bs-target="#collapseWidthExample"
                   aria-expanded="false"
                   aria-controls="collapseWidthExample"
-                  onClick={() => handlereportGroup(singlegroup.groupId)}
+                  onClick={() => handlereportGroup(singlegroup?.groupId)}
                   disabled={!reasonDetails.trim() || reasonCategory === ""}
                 >
                   Submit
@@ -286,68 +329,71 @@ function GroupInvite() {
       </div>
 
       <h5 className="mt-5 text-center">Related Groups</h5>
-      {relatedData.map((rData, index) => (
+      {relatedData && relatedData.value && Array.isArray(relatedData.value) && relatedData.value.slice(0, visibleGroups).map((rData, index) => (
         <React.Fragment key={rData.groupId}>
           <div className="mt-4 mb-4 d-flex justify-content-center">
             <div className="card card_w">
               <div className="card-body">
                 <img
-                  src={rData.groupImage}
+                  src={getAbsoluteImageUrl(rData.GroupImage)}
                   onError={(e) => {
                     e.target.src = replacelogo; // Replace with your default image URL
                   }}
                   width={"8%"}
                   className="rounded-circle"
+                  alt={rData.groupName || 'Related Group Image'}
                 />
                 <div className="heading-div">
                   <h5>
-                    <a
-                      href=""
+                    <Link
+                      to={`/groupinvite?id=${rData.groupId}&catId=${rData.catId}`}
                       className="text-black text-decoration-none fw-bold underline"
                       onClick={() => {
-                        event.preventDefault();
-                        handleGroupClick(rData.groupId, rData.catId);
+                        window.scrollTo(0,0);
                       }}
                     >
                       {rData.groupName}
-                    </a>
+                    </Link>
                   </h5>
                   <div>
-                    <a
-                      href=""
+                    <Link
+                      to={`/groups/category/${rData?.Category?.catName}`}
                       className="text-decoration-none text-secondary underline"
                     >
-                      <i class="bi bi-list"></i> {rData.catName}
-                    </a>
-                    <a
-                      href=""
+                      <i class="bi bi-list"></i> {rData.Category.catName}
+                    </Link>
+                    <Link
+                      to={`/groups/country/${rData?.country}`}
                       className="text-decoration-none text-secondary underline"
                     >
                       <i class="bi bi-globe"></i> {rData.country}
-                    </a>
-                    <a
-                      href=""
+                    </Link>
+                    <Link
+                      to={`/groups/language/${rData?.Language}`}
                       className="text-decoration-none text-secondary underline"
                     >
-                      <i class="bi bi-translate"></i> {rData.language}
-                    </a>
+                      <i class="bi bi-translate"></i> {rData.Language}
+                    </Link>
                   </div>
                 </div>
               </div>
               <div>
                 <p className="text-right ps-4 pe-4">
-                  <a
-                    href=""
+                  <Link
+                    to={`/groupinvite?id=${rData.groupId}&catId=${rData.catId}`}
                     className="text-decoration-none text-black underline"
+                    onClick={() => {
+                      window.scrollTo(0,0);
+                    }}
                   >
                     {truncateDescription(rData.groupDesc)}
-                  </a>
-                  {rData.groupDesc.length > 25 && (
+                  </Link>
+                  {rData.groupDesc && rData.groupDesc.length > 25 && (
                     <Link
                       className="text-decoration-none underline"
+                      to={`/groupinvite?id=${rData.groupId}&catId=${rData.catId}`}
                       onClick={() => {
-                        event.preventDefault();
-                        handleGroupClick(rData.groupId, rData.catId);
+                        window.scrollTo(0,0);
                       }}
                     >
                       Read more
@@ -357,23 +403,26 @@ function GroupInvite() {
                 <hr />
               </div>
               <div className="ps-4 pe-4 d-flex justify-content-between">
-                <a
-                  href=""
+                <Link
+                  to={`/joingroup/${rData?.groupLink.substring(
+                    rData?.groupLink.lastIndexOf("/") + 1
+                  )}?groupName=${encodeURIComponent(rData?.groupName)}`}
                   className="text-decoration-none text-black fw-bold fs-5 underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   onClick={() => {
-                    event.preventDefault();
-                    handleGroupClick(rData.groupId, rData.catId);
+                    window.scrollTo(0,0);
                   }}
                 >
                   Join Group
-                </a>
+                </Link>
                 <p className="social-icons-p d-flex align-items-center fs-5">
                   Share on :{" "}
                   <div className="social-icons-div ">
                     <a
                       href=""
                       onClick={() => {
-                        shareOnWhatsApp(rData.groupLink);
+                        window.open(shareOnWhatsApp(rData.groupLink), "_blank");
                       }}
                     >
                       <i className="bi bi-whatsapp text-success"></i>
@@ -381,7 +430,7 @@ function GroupInvite() {
                     <a
                       href=""
                       onClick={() => {
-                        shareOnInstagram(rData.groupLink);
+                        window.open(shareOnInstagram(rData.groupLink), "_blank");
                       }}
                     >
                       <i
@@ -392,7 +441,7 @@ function GroupInvite() {
                     <a
                       href=""
                       onClick={() => {
-                        shareOnTelegram(rData.groupLink);
+                        window.open(shareOnTelegram(rData.groupLink), "_blank");
                       }}
                     >
                       <i className="bi bi-telegram"></i>
@@ -407,18 +456,26 @@ function GroupInvite() {
           {(index + 1) % 2 === 0 && (
             <div style={{ width: '100%', display: 'flex', justifyContent: 'center', margin: '24px 0' }}>
               <ins className="adsbygoogle"
-                style={{ display: 'block', width: '100%', maxWidth: 728, minHeight: 90 }}
-                data-ad-client={adsenseClient}
-                data-ad-slot={adsenseSlot}
-                data-ad-format="auto"
-                data-full-width-responsive="true"></ins>
+   style={{ display: 'block', width: '100%', maxWidth: 728, minHeight: 90 }}
+   data-ad-client={adsenseClient}
+   data-ad-slot={adsenseSlot}
+   data-ad-format="auto"
+   data-full-width-responsive="true"></ins>
             </div>
           )}
         </React.Fragment>
       ))}
      
+      {relatedData && relatedData.value && visibleGroups < relatedData.value.length && (
+        <div className="d-flex justify-content-start mt-3">
+          <button className="btn btn-primary" onClick={() => setVisibleGroups(prev => prev + 2)}>
+            Load More
+          </button>
+        </div>
+      )}
     </div>
   );
 }
 
 export default GroupInvite;
+

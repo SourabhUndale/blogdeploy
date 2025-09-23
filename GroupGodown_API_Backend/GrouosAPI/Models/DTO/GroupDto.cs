@@ -6,8 +6,7 @@
         public string groupName { get; set; }
         public string groupLink { get; set; }
         public string GroupImage { get; set; }
-        public string catName { get; set; }
-        public int? catId {get; set;}
+        public CategoryDto Category { get; set; }
         public string country { get; set; }
         public string Language { get; set; }
         public string? groupDesc { get; set; }

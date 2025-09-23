@@ -58,13 +58,13 @@ namespace GrouosAPI.Controllers
 
             if(category != null)
             {
-var categoryDto = new CategoryDto
-            {
-                id=category.catId,
-                name = category.catName
-            };
+                var categoryDto = new CategoryDto
+                {
+                    catId = category.catId,
+                    catName = category.catName
+                };
 
-            return CreatedAtAction(nameof(GetById),new { id = category.catId},categoryDto);
+                return CreatedAtAction(nameof(GetById),new { id = category.catId},categoryDto);
             }
 
             return Content("Categroy Type Already Exists");

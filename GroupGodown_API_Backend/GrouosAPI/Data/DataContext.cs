@@ -32,7 +32,7 @@ namespace GrouosAPI.Data
                 .WithMany(g => g.Reports)
                 .HasForeignKey(r => r.GroupId);
 
-            modelBuilder.Entity<Blog>().ToTable("Blogs");
+            modelBuilder.Entity<Models.Blog>().ToTable("Blogs");
         }
 
 
@@ -41,6 +41,6 @@ namespace GrouosAPI.Data
         public DbSet<Application> Application { get; set; }
         public DbSet<Report> Report { get; set; }
         public DbSet<Admin> Admin { get; set; }
-        public DbSet<Blog> Blogs { get; set; }
+        public DbSet<Models.Blog> Blogs { get; set; }
     }
 }

@@ -2,11 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using GrouosAPI.Models.DTO;
 using GrouosAPI.Interface;
 using GrouosAPI.Helpers;
-using Microsoft.Extensions.Configuration;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace GrouosAPI.Controllers
 {
@@ -15,127 +11,134 @@ namespace GrouosAPI.Controllers
     public class BlogController : ControllerBase
     {
         private readonly IBlogRepository _blogRepository;
-        private readonly string _imageFolderPath;
+        private readonly IMemoryCache _cache;
+        private readonly ILogger<BlogController> _logger;
 
-        public BlogController(IBlogRepository blogRepository, IConfiguration configuration)
+        private const string CacheKeyPrefix = "blogs_page_";
+        private const string CacheBlogPrefix = "blog_";
+
+        public BlogController(IBlogRepository blogRepository, IMemoryCache cache, ILogger<BlogController> logger)
         {
             _blogRepository = blogRepository;
-            _imageFolderPath = configuration["ImageFolderPath"] ?? "wwwroot/images"; // Use configuration
+            _cache = cache;
+            _logger = logger;
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetAllBlogs(CancellationToken cancellationToken)
+        private void InvalidateCache()
         {
-            var blogs = await _blogRepository.GetAllBlogsAsync(cancellationToken);
+            // ✅ Flush the entire memory cache (since only blogs are cached)
+            (_cache as MemoryCache)?.Compact(1.0);
+        }
+
+        // ✅ Get all blogs with pagination (cached)
+        [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public async Task<IActionResult> GetAllBlogs([FromQuery] int page = 1, [FromQuery] int pageSize = 10, CancellationToken cancellationToken = default)
+        {
+            var cacheKey = $"{CacheKeyPrefix}{page}_{pageSize}";
+            if (!_cache.TryGetValue(cacheKey, out var blogs))
+            {
+                blogs = await _blogRepository.GetPagedBlogsAsync(page, pageSize, cancellationToken);
+
+                _cache.Set(cacheKey, blogs, new MemoryCacheEntryOptions
+                {
+                    SlidingExpiration = TimeSpan.FromMinutes(2),
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)
+                });
+            }
+
             return Ok(blogs);
         }
 
+        // ✅ Get blog by ID
         [HttpGet("{id}")]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public async Task<IActionResult> GetBlogById(int id, CancellationToken cancellationToken)
         {
-            var blog = await _blogRepository.GetBlogByIdAsync(id, cancellationToken);
-            if (blog == null)
+            var cacheKey = $"{CacheBlogPrefix}{id}";
+            if (!_cache.TryGetValue(cacheKey, out var blog))
             {
-                return NotFound(new { Message = "Blog not found." });
+                blog = await _blogRepository.GetBlogByIdAsync(id, cancellationToken);
+                if (blog == null) return NotFound(new { Message = "Blog not found." });
+
+                _cache.Set(cacheKey, blog, TimeSpan.FromMinutes(10));
             }
             return Ok(blog);
         }
+
+       
+       
+        // Add Blog
         [HttpPost]
         public async Task<IActionResult> AddBlog([FromForm] BlogDto blogDto, CancellationToken cancellationToken)
         {
-            Console.WriteLine($"Received Payload: {JsonConvert.SerializeObject(blogDto)}");
-            if (!ModelState.IsValid) // Validate model state
+            if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            try
-            {
-                if (blogDto.ImageFile != null)
-                {
-                    blogDto.Image = await FileHelper.SaveImageAsync(blogDto.ImageFile, _imageFolderPath);
-                }
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { Message = "Error saving image.", Details = ex.Message });
-            }
-
-            var blog = await _blogRepository.AddBlogAsync(blogDto, cancellationToken);
-
-            // Check for null response from repository
-            if (blog == null)
-            {
-                Console.WriteLine("Failed to add the blog.");
-                return BadRequest(new { Message = "Failed to add the blog." });
-            }
-
-            Console.WriteLine($"Blog successfully added: {JsonConvert.SerializeObject(blog)}");
-            return CreatedAtAction(nameof(GetBlogById), new { id = blog.Id }, blog);
-        }
-
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateBlog(int id, [FromForm] BlogDto blogDto, CancellationToken cancellationToken)
-        {
-            if (!ModelState.IsValid) // Validate model state
-                return BadRequest(ModelState);
-
-            var existingBlog = await _blogRepository.GetBlogByIdAsync(id, cancellationToken);
-            if (existingBlog == null)
-            {
-                return NotFound(new { Message = "Blog not found." });
-            }
+            blogDto.Title = blogDto.Title?.Trim(); // 🔑 remove starting/ending spaces
+            if (string.IsNullOrWhiteSpace(blogDto.Title))
+                return BadRequest(new { Message = "Title cannot be empty or whitespace." });
 
             if (blogDto.ImageFile != null)
             {
-                if (!string.IsNullOrEmpty(existingBlog.Image))
-                {
-                    await FileHelper.DeleteImageAsync(_imageFolderPath, existingBlog.Image); // Await async call
-                }
-                blogDto.Image = await FileHelper.SaveImageAsync(blogDto.ImageFile, _imageFolderPath);
+                var (original, _) = await FileHelper.SaveImageWithThumbnailAsync(blogDto.ImageFile, "wwwroot/images");
+                blogDto.Image = original;
+            }
+
+            var blog = await _blogRepository.AddBlogAsync(blogDto, cancellationToken);
+            InvalidateCache();
+
+            return CreatedAtAction(nameof(GetBlogById), new { id = blog.Id }, blog);
+        }
+
+        // Update Blog
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateBlog(int id, [FromForm] BlogDto blogDto, CancellationToken cancellationToken)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            blogDto.Title = blogDto.Title?.Trim(); // 🔑 normalize
+            if (string.IsNullOrWhiteSpace(blogDto.Title))
+                return BadRequest(new { Message = "Title cannot be empty or whitespace." });
+
+            var existingBlog = await _blogRepository.GetBlogByIdAsync(id, cancellationToken);
+            if (existingBlog == null)
+                return NotFound(new { Message = "Blog not found." });
+
+            if (blogDto.ImageFile != null)
+            {
+                var (original, _) = await FileHelper.SaveImageWithThumbnailAsync(blogDto.ImageFile, "wwwroot/images");
+                blogDto.Image = original;
             }
 
             var updatedBlog = await _blogRepository.UpdateBlogAsync(id, blogDto, cancellationToken);
-            if (updatedBlog == null)
-            {
-                return BadRequest(new { Message = "Failed to update the blog." });
-            }
+            InvalidateCache();
 
             return Ok(updatedBlog);
         }
 
-
+        // Get Blog by Title
         [HttpGet("title/{title}")]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public async Task<IActionResult> GetBlogByTitle(string title, CancellationToken cancellationToken)
         {
-            string formattedTitle = title.Replace("-", " "); // Convert hyphens back to spaces
+            string formattedTitle = title.Replace("-", " ").Trim(); // 🔑 just trim spaces
             var blog = await _blogRepository.GetBlogByTitleAsync(formattedTitle, cancellationToken);
 
-            if (blog == null)
-            {
-                return NotFound(new { Message = "Blog not found." });
-            }
-
+            if (blog == null) return NotFound(new { Message = "Blog not found." });
             return Ok(blog);
         }
 
+
+        // ✅ Delete blog
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteBlog(int id, CancellationToken cancellationToken)
         {
-            var existingBlog = await _blogRepository.GetBlogByIdAsync(id, cancellationToken);
-            if (existingBlog == null)
-            {
-                return NotFound(new { Message = "Blog not found." });
-            }
-
-            if (!string.IsNullOrEmpty(existingBlog.Image))
-            {
-                await FileHelper.DeleteImageAsync(_imageFolderPath, existingBlog.Image); // Await async call
-            }
-
             var success = await _blogRepository.DeleteBlogAsync(id, cancellationToken);
-            if (!success)
-            {
-                return BadRequest(new { Message = "Failed to delete the blog." });
-            }
+            if (!success) return NotFound(new { Message = "Blog not found." });
+
+            InvalidateCache(); // ✅ clear cache after delete
 
             return NoContent();
         }

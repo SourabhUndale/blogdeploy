@@ -72,6 +72,44 @@ namespace GrouosAPI.Migrations
                     b.ToTable("Application");
                 });
 
+            modelBuilder.Entity("GrouosAPI.Models.Blog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<string>("AltText")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<string>("Image")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("MetaDescription")
+                        .HasMaxLength(160)
+                        .HasColumnType("varchar(160)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<bool>("isActive")
+                        .HasColumnType("tinyint(1)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Blogs", (string)null);
+                });
+
             modelBuilder.Entity("GrouosAPI.Models.Category", b =>
                 {
                     b.Property<int>("catId")
@@ -129,6 +167,9 @@ namespace GrouosAPI.Migrations
                     b.Property<string>("groupRules")
                         .HasColumnType("longtext");
 
+                    b.Property<bool>("isActive")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<string>("tags")
                         .HasColumnType("longtext");
 
@@ -138,7 +179,7 @@ namespace GrouosAPI.Migrations
 
                     b.HasIndex("catId");
 
-                    b.ToTable("ChatGroups");
+                    b.ToTable("Groups");
                 });
 
             modelBuilder.Entity("GrouosAPI.Models.Report", b =>

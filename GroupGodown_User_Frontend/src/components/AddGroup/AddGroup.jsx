@@ -43,6 +43,8 @@ function AddGroup() {
     setSelectedApplicationTypeError,
   ] = useState("");
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleFormSubmit = async (e) => {
     e.preventDefault();
 
@@ -87,6 +89,8 @@ function AddGroup() {
       return;
     }
 
+    setIsSubmitting(true); // Disable button
+
     // Handling the submit click
 
     try {
@@ -102,7 +106,7 @@ function AddGroup() {
 
       // Make the API call using Axios
       const response = await axios.post(
-        `${baseUri}api/Groups?catId=${selectedCategory}&appid=${selectedApplicationType}`,
+        `${baseUri}groups?catId=${selectedCategory}&appid=${selectedApplicationType}`,
         requestData
       );
 
@@ -133,6 +137,8 @@ function AddGroup() {
       // Handle error response
       console.error("API call failed:", error);
       // You can also handle errors by showing an error message to the user
+    } finally {
+      setIsSubmitting(false); // Re-enable button
     }
   };
 
@@ -192,22 +198,22 @@ function AddGroup() {
                 onChange={(e) => {
                   const selectedcat = e.target.value;
                   const newCat =
-                    selectedcat === "Any Category" ? "" : selectedcat;
+                    selectedcat === "Category" ? "" : selectedcat;
                   setSelectedCategory(newCat);
                   setSelectedCategoryError("");
                 }}
               >
-                <option>Any Category</option>
+                <option>Category</option>
                 {/* {categories.map((category) => (
                   <option key={category.id} value={category.id}>
                     {category.name}
                   </option>
                 ))} */}
                 {categories
-                  .sort((a, b) => a.name.localeCompare(b.name)) // Sort categories alphabetically
+                  .sort((a, b) => (a.name || '').localeCompare(b.name || '')) // Sort categories alphabetically
                   .map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
+                    <option key={category.catId} value={category.catId}>
+                      {category.catName}
                     </option>
                   ))}
               </select>
@@ -226,11 +232,11 @@ function AddGroup() {
                 onChange={(e) => {
                   const selectedCon = e.target.value;
                   const newCon =
-                    selectedCon === "Any Country" ? "" : selectedCon;
+                    selectedCon === "Country" ? "" : selectedCon;
                   setSelectedCountry(newCon);
                 }}
               >
-                <option>Any Country</option>
+                <option>Country</option>
                 {/* {countries.map((country) => (
                   <option key={country.id} value={country.name}>
                     {country.name}
@@ -259,11 +265,11 @@ function AddGroup() {
                 onChange={(e) => {
                   const selectedLang = e.target.value;
                   const newLang =
-                    selectedLang === "Any Language" ? "" : selectedLang;
+                    selectedLang === "Language" ? "" : selectedLang;
                   setSelectedLanguage(newLang);
                 }}
               >
-                <option>Any Language</option>
+                <option>Language</option>
                 {Object.entries(langData).map(([code, name]) => (
                   <option key={code} value={name}>
                     {name}
@@ -328,7 +334,7 @@ function AddGroup() {
                 Ex:- Funny, Jokes, City, State(Up to 500 words)
               </div>
               <p>Note:- Your Group is Visible to Public Worldwide (Everyone)</p>
-              <button type="submit" className="btn btn-success submit-btn">
+              <button type="submit" className="btn btn-success submit-btn" disabled={isSubmitting}>
                 Submit
               </button>
             </div>

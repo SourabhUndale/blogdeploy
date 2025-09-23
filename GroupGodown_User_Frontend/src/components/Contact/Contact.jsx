@@ -17,7 +17,6 @@ const ContactForm = () => {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    console.log("Updated formData:", { ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e) => {
@@ -26,14 +25,12 @@ const ContactForm = () => {
     setError("");
     setSuccessMessage("");
 
-    // Log formData to ensure it's populated
-    console.log("Form data before sending:", formData);
+   
 
     const queryParams = new URLSearchParams(formData).toString();
     const url = `https://search.api.techkmr.com/sendMail?${queryParams}`;
 
-    // Log the constructed URL to see what is being sent
-    console.log("Request URL:", url);
+    
 
     try {
       const response = await fetch(url, {

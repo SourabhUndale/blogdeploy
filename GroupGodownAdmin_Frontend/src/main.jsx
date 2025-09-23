@@ -26,6 +26,7 @@ import NormalGroupsTable from "./components/adminsettings/NormalGroupsTable.jsx"
 import Login from "./components/login/Login.jsx";
 import UploadGroups from "./components/adminsettings/uploadgroups.jsx";
 import AddBlog from "./components/adminsettings/AddBlog.jsx";
+import UpdateGroup from "./components/adminsettings/UpdateGroup.jsx";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -42,21 +43,38 @@ const router = createBrowserRouter(
           <Route path="activegroupstable" element={<ActiveGroupsTable />} />
         </Route>
         <Route path="reportedgroups" element={<ReportedGroups />} />
-        <Route
-          path="addremoveapplicationtype"
-          element={<AddRemoveApplicationType />}
-        />
-        <Route path="addremovecategory" element={<AddRemoveCategory />} />
-        <Route path="addremovegroup" element={<AddRemoveGroup />} />
-        <Route path="groupreportsetting" element={<GroupReportSetting />} />
-        <Route path="makeAdmin" element={<MakeAdmin />} />
-        <Route path="addBlog" element={<AddBlog />} /> 
-        <Route path="pingroup" element={<PinGroup />}>
-          <Route path="" element={<PinnedGroupsTable />} />
-          <Route path="normalgroupstable" element={<NormalGroupsTable />} />
-        </Route>
         <Route path="reports" element={<Reports />} />
         <Route path="uploadgroups" element={<UploadGroups />} />
+
+        {/* Admin Settings */}
+        <Route path="adminsettings">
+          <Route index element={<AddRemoveGroup />} />
+          <Route path="addremovegroup" element={<AddRemoveGroup />} />
+          <Route
+            path="addremovecategory"
+            element={<AddRemoveCategory />}
+          />
+          <Route
+            path="addremoveapplicationtype"
+            element={<AddRemoveApplicationType />}
+          />
+          <Route path="pingroup" element={<PinGroup />}>
+            <Route index element={<PinnedGroupsTable />} />
+            <Route path="normalgroupstable" element={<NormalGroupsTable />} />
+            <Route
+              path="pinnedgroupstable"
+              element={<PinnedGroupsTable />}
+            />
+          </Route>
+          <Route path="makeAdmin" element={<MakeAdmin />} />
+          <Route path="addBlog" element={<AddBlog />} />
+          <Route
+            path="groupreportsetting"
+            element={<GroupReportSetting />}
+          />
+          <Route path="updategroup" element={<UpdateGroup />} />
+          <Route path="updategroup/:groupId" element={<UpdateGroup />} />
+        </Route>
       </Route>
     </Route>
   )

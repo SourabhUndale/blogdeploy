@@ -12,13 +12,13 @@ export const useLanguages = () => {
 };
 
 export const useCategories = () => {
-  return useDataFetch('https://localhost:7134/api/Category', []);
+  return useDataFetch('https://base.groupgodown.com/api/Category', []);
 };
 
 export const useApplicationTypes = () => {
-  return useDataFetch('https://localhost:7134/api/Application', []);
+  return useDataFetch('https://base.groupgodown.com/api/Application', []);
 };
 
 export const useGroups = () => {
-  return useDataFetch('https://localhost:7134/api/Group/id/Groups', []);
+  return useDataFetch('https://base.groupgodown.com/api/Group/id/Groups', []);
 };

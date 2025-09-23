@@ -18,7 +18,7 @@ using static System.Net.Mime.MediaTypeNames;
 
 namespace GrouosAPI.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("groups")]
     [ApiController]
     public class GroupsController : ControllerBase
     {
@@ -34,30 +34,48 @@ namespace GrouosAPI.Controllers
 
 
         [EnableQuery]
-        [HttpGet]
-        public IQueryable<Groups> Get()
+        [HttpGet("all")]
+        public IQueryable<Groups> GetAllGroups()
         {
             return _groupRepository.GetAll();
         }
+        
+        [HttpGet("country/{country_Name}")]
+        public IActionResult GetGroupsByCountry(string country_Name)
+        {
+            var groupDto = _groupRepository.GetGroupByCountry(country_Name);
+            if (groupDto != null)
+            {
+                return Ok(groupDto);
+            }
+            return NotFound();
+        }
 
-        // public IActionResult Get(ODataQueryOptions<Group> options)
-        // {
-        //     var groups = _groupRepository.GetAll();
+        [HttpGet("language/{language_Name}")]
+        public IActionResult GetGroupsByLanguage(string language_Name)
+        {
+            var groupDto = _groupRepository.GetGroupByLang(language_Name);
+            if (groupDto != null)
+            {
+                return Ok(groupDto);
+            }
+            return NotFound();
+        }
+      
 
-        //     // Apply OData query options
-        //     var queryResults = (IQueryable<Group>)options.ApplyTo(groups);
-
-        //     return Ok(queryResults);    
-        // }
-
-
-        //[EnableQuery]
-        //[HttpGet]
-        //[Route("{id}")]
-        //public IActionResult GetById( int id)
-        //{
-        //    return Ok(_groupRepository.GetById(id));
-        //}
+        [EnableQuery]
+        // [Authorize]
+        [HttpGet("name/{groupName}")]
+        public IActionResult GetById(string groupName)
+        {
+            var groupDtos = _groupRepository.GetByGroupName(groupName);
+            if (groupDtos != null && groupDtos.Any())
+            {
+                return Ok(groupDtos);
+            }
+            return NotFound();
+            
+        }
 
         [EnableQuery]
         // [Authorize]
@@ -74,39 +92,38 @@ namespace GrouosAPI.Controllers
             
         }
 
+        [HttpGet("tag/{tagName}")]
+        public IActionResult GetGroupsByTag(string tagName)
+        {
+            var groupDto = _groupRepository.GetGroupsByTagName(tagName);
+            if (groupDto != null)
+            {
+                return Ok(groupDto);
+            }
+            return NotFound();
+        }
+
+        [HttpGet("Category/{category_Name}")]
+        public IActionResult GetGroupsByCategory(string category_Name)
+        {
+            var groupDto = _groupRepository.GetGroupsByCategoryName(category_Name);
+            if (groupDto != null)
+            {
+                return Ok(groupDto);
+            }
+            return NotFound();
+        }
+
         //[Authorize]
         [HttpGet]
-        [Route("id/Groups")]
+        [Route("find")]
         public IActionResult GetByCatOrCountryOrLang(int? catId, string? country, string? lang, int? appId)
         {
             if (catId == null && country == null && lang == null && appId == null)
             {
                 Console.WriteLine("Combination 1: All variables are null");
                 var groupDto = _groupRepository.GetGroups();
-
-                //var groups = _groupRepository.GetGroups();
-                //var groupDto = new List<GroupDto> { };
-                //var category = new Category();
-
-
-                //foreach (var group in groups)
-                //{
-                //    category = _context.Category.Where(x => x.catId == group.catId).FirstOrDefault();
-                //    groupDto.Add(new GroupDto()
-                //    {
-                //        groupId = group.groupId,
-                //        groupName = group.groupName,
-                //        GroupImage = group.GroupImage,
-                //        catName = category.catName,
-                //        groupDesc = group.groupDesc,
-                //        groupLink = group.groupLink,
-                //        groupRules = group.groupRules,
-                //        country = group.country,
-                //        Language = group.Language,
-                //        tags = group.tags
-                //    }); 
-
-                //}
+                
                 return Ok(groupDto);
             }
             else if (catId == null && country == null && lang == null && appId != null)
@@ -221,71 +238,15 @@ namespace GrouosAPI.Controllers
 
         //[Authorize]
         [HttpPost]
-        public IActionResult addGroup(int catId, int appId, [FromBody] addGroupDto addGroupDto)
+        public async Task<IActionResult> addGroup(int catId, int appId, [FromBody] addGroupDto addGroupDto)
         {
-            var groupDto = _groupRepository.AddGroup(catId, appId, addGroupDto);
+            var groupDto = await _groupRepository.AddGroup(catId, appId, addGroupDto);
             if(groupDto != null)
             {
                 return Ok(groupDto);
             }
             return Content("Group not valid");
-
-            //if(!_groupRepository.existGroup(addGroupDto.groupLink))
-            //{ 
-            //    GroupData groupData = GroupImage.GetImageAndName(addGroupDto.groupLink);
-
-            //    if (groupData != null)
-            //    {
-            //        var category = _context.Category.Find(catId);
-            //        var existAppId = _context.Application.Find(appId) != null;
-            //        if (category != null && existAppId && groupData.ImageLink != null && groupData.GroupName != null)
-            //        {
-            //            var group = new Groups
-            //            {
-            //                catId = catId,
-            //                appId = appId,
-            //                groupName = groupData.GroupName,
-            //                GroupImage = groupData.ImageLink,
-            //                groupLink = addGroupDto.groupLink,
-            //                groupDesc = addGroupDto.groupDesc,
-            //                groupRules = addGroupDto.groupRules,
-            //                country = addGroupDto.country,
-            //                Language = addGroupDto.Language,
-            //                tags = addGroupDto.tags
-            //            };
-
-            //            //_context.Groups.Add(group);
-            //            //_context.SaveChanges();
-
-            //            var groupDto = new GroupDto()
-            //            {
-            //                groupId = group.groupId,
-            //                groupName = group.groupName,
-            //                GroupImage = group.GroupImage,
-            //                catName = category.catName,
-            //                groupDesc = group.groupDesc,
-            //                groupLink = group.groupLink,
-            //                groupRules = group.groupRules,
-            //                country = group.country,
-            //                Language = group.Language,
-            //                tags = group.tags
-            //            };
-            //            return CreatedAtAction(nameof(Get), new { id = group.groupId }, groupDto);
-            //        }
-            //        else
-            //        {
-            //            return Content("Category Or App Not Valid");
-            //        }
-            //    }
-            //    else
-            //    {
-            //        return Content("Group Not Valid");
-            //    }
-            //}
-            //else
-            //{
-            //    return Content("Group already exists");
-            //}
+        
 
         }
 
@@ -301,46 +262,7 @@ namespace GrouosAPI.Controllers
             }
 
             return null;
-            //  var group = _context.Groups.Find(id);
-            //  if (addGroupDto == null)
-            //  {
-            //      return NotFound();
-            //  }
-            //  if (group == null)
-            //  {
-            //      return NotFound();
-            //  }
-
-            //  group.catId = catId;  
-            //  group.appId = appId;
-            ////group.groupName = addGroupDto.groupName;
-            //  group.groupLink = addGroupDto.groupLink;
-            //  group.groupDesc = addGroupDto.groupDesc;
-            //  group.groupRules = addGroupDto.groupRules;
-            //  group.country = addGroupDto.country;
-            //  group.Language = addGroupDto.Language;
-            //  group.tags = addGroupDto.tags; 
-
-            // _context.Groups.Update(group);
-            // _context.SaveChanges();
-
-            //  var category = _context.Category.Find(group.catId);
-            //  var gropuDto = new GroupDto
-            //  {
-            //      groupId = group.groupId,
-            //      groupName = group.groupName,
-            //      catName = category.catName,
-            //      groupDesc = group.groupDesc,
-            //      groupLink = group.groupLink,
-            //      groupRules = group.groupRules,
-            //      country = group.country,
-            //      Language = group.Language,
-            //      tags = group.tags
-            //  };
-
-
-
-            //  return Ok(gropuDto);
+            
         }
 
         [Authorize]
@@ -354,26 +276,11 @@ namespace GrouosAPI.Controllers
                 return Ok("Pin Changed");
             }
             return Content("Group not exist");
-            //var group = _context.Groups.Find(id);
-            //if (group != null)
-            //{
-            //    if (group.Pin != true)
-            //    {
-            //        group.Pin = true;
-            //    }
-            //    else
-            //    {
-            //        group.Pin = false;
-            //    }
-            //    _context.SaveChanges();
-            //    return Ok();
-            //}
-            //return Content("Group Not Found");
+            
         }
 
         [Authorize]
-        [HttpDelete]
-        [Route("{id}")]
+        [HttpDelete("{id}")]
         public IActionResult DeleteGroup(int id)
         {
             var deleted = _groupRepository.DeleteGroup(id);
@@ -382,15 +289,19 @@ namespace GrouosAPI.Controllers
                 return Ok();
             }
             return Content("Group not exist");
+           
+        }
 
-            //var group = _context.Groups.Find(id);
-            //if (group == null)
-            //{
-            //    return NotFound();
-            //}
-            //_context.Groups.Remove(group);
-            //_context.SaveChanges();
-            //return Ok();
+        [Authorize]
+        [HttpDelete("harddelete/{id}")]
+        public IActionResult HardDeleteGroup(int id)
+        {
+            var deleted = _groupRepository.HardDeleteGroup(id);
+            if (deleted)
+            {
+                return Ok();
+            }
+            return Content("Group not exist");
         }
 
         [HttpPost("bulkAddGroups")]
@@ -471,7 +382,7 @@ namespace GrouosAPI.Controllers
 
                         try
                         {
-                            var result = _groupRepository.AddGroup(catId, appId, addGroupDto);
+                            var result = await _groupRepository.AddGroup(catId, appId, addGroupDto);
                             if (result != null && result.message == "Group Already Exist")
                             {
                                 results.Add(new BulkAddResultDto

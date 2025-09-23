@@ -1,0 +1,40 @@
+USE tmp_db;
+
+ALTER TABLE Blogs
+    -- Change `Description` type, collation & NOT NULL
+    MODIFY COLUMN `Description`
+        varchar(500)
+        CHARACTER SET utf8mb4
+        COLLATE utf8mb4_0900_ai_ci
+        NOT NULL,
+
+    -- Add the missing columns
+    ADD COLUMN `MetaDescription`
+        varchar(160)
+        CHARACTER SET utf8mb4
+        COLLATE utf8mb4_0900_ai_ci
+        DEFAULT NULL
+        AFTER `Image`,
+
+    ADD COLUMN `AltText`
+        varchar(255)
+        CHARACTER SET utf8mb4
+        COLLATE utf8mb4_0900_ai_ci
+        DEFAULT NULL
+        AFTER `MetaDescription`,
+
+    ADD COLUMN `isActive`
+        tinyint(1)
+        NOT NULL
+        DEFAULT '0'
+        AFTER `AltText`;
+
+
+USE tmp_db;
+
+ALTER TABLE `Groups`
+    ADD COLUMN `isActive`
+        tinyint(1)
+        NOT NULL
+        DEFAULT '0'
+        AFTER `appId`;

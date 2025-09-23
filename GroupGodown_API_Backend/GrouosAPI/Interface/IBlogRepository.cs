@@ -2,21 +2,24 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using GrouosAPI.Models.DTO;
+using GrouosAPI.Models;
 
-public interface IBlogRepository
+namespace GrouosAPI.Interface
+{
+    public interface IBlogRepository
 {
     /// <summary>
     /// Retrieves all blogs asynchronously.
     /// </summary>
     /// <returns>A collection of blogs.</returns>
-    Task<IEnumerable<Blog>> GetAllBlogsAsync(CancellationToken cancellationToken = default);
+    Task<PagedBlogResponseDto> GetPagedBlogsAsync(int page, int pageSize, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Retrieves a blog by its ID asynchronously.
     /// </summary>
     /// <param name="id">The ID of the blog.</param>
     /// <returns>The blog with the specified ID.</returns>
-    Task<Blog> GetBlogByIdAsync(int id, CancellationToken cancellationToken = default);
+    Task<BlogResponseDto> GetBlogByIdAsync(int id, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Adds a new blog asynchronously.
@@ -40,5 +43,6 @@ public interface IBlogRepository
     /// <returns>True if the deletion was successful; otherwise, false.</returns>
     Task<bool> DeleteBlogAsync(int id, CancellationToken cancellationToken = default);
 
-    Task<Blog> GetBlogByTitleAsync(string title, CancellationToken cancellationToken);
+    Task<BlogResponseDto> GetBlogByTitleAsync(string title, CancellationToken cancellationToken);
+    }
 }

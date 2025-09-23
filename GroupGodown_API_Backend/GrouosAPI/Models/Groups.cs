@@ -20,6 +20,7 @@ namespace GrouosAPI.Models
 
         [DefaultValue("false")]
         public bool Pin { get; set; }
+        public bool isActive { get; set; } = true;
         //One TO Many
         public int catId { get; set; }
         public Category Category { get; set; }

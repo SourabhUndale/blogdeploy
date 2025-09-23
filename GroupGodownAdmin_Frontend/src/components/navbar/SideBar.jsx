@@ -8,7 +8,7 @@ function SideBar() {
 
   const sessionUsername = sessionStorage.getItem("Username");
 
-  console.log(sessionUsername);
+  //console.log(sessionUsername);
 
   const toggleSidebar = () => {
     setSidebarOpen(!isSidebarOpen);
@@ -214,7 +214,7 @@ function SideBar() {
               >
                 <li>
                   <Link
-                    to="addremovegroup"
+                    to="adminsettings/addremovegroup"
                     class="flex items-center w-full p-2 active:bg-gray-300 text-gray-900 transition duration-75 rounded-lg pl-11 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
                   >
                     Add Group
@@ -222,7 +222,7 @@ function SideBar() {
                 </li>
                 <li>
                   <Link
-                    to="addremovecategory"
+                    to="adminsettings/addremovecategory"
                     class="flex items-center w-full p-2 active:bg-gray-300 text-gray-900 transition duration-75 rounded-lg pl-11 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
                   >
                     Add Category
@@ -230,7 +230,7 @@ function SideBar() {
                 </li>
                 <li>
                   <Link
-                    to="addremoveapplicationtype"
+                    to="adminsettings/addremoveapplicationtype"
                     class="flex items-center w-full p-2 active:bg-gray-300 text-gray-900 transition duration-75 rounded-lg pl-11 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
                   >
                     Add Application Type
@@ -238,7 +238,7 @@ function SideBar() {
                 </li>
                 <li>
                   <Link
-                    to="pingroup"
+                    to="adminsettings/pingroup"
                     class="flex items-center w-full p-2 active:bg-gray-300 text-gray-900 transition duration-75 rounded-lg pl-11 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
                   >
                     Pin Group
@@ -254,7 +254,7 @@ function SideBar() {
                 </li> */}
                 <li>
                   <Link
-                    to="makeAdmin"
+                    to="adminsettings/makeAdmin"
                     class="flex items-center w-full p-2 active:bg-gray-300 text-gray-900 transition duration-75 rounded-lg pl-11 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
                   >
                     Make Admin
@@ -262,10 +262,18 @@ function SideBar() {
                 </li>
                 <li>
                   <Link
-                    to="addBlog"
+                    to="adminsettings/addBlog"
                     class="flex items-center w-full p-2 active:bg-gray-300 text-gray-900 transition duration-75 rounded-lg pl-11 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
                   >
                     Add Blog
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="adminsettings/updategroup"
+                    class="flex items-center w-full p-2 active:bg-gray-300 text-gray-900 transition duration-75 rounded-lg pl-11 group hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                  >
+                    Update Group
                   </Link>
                 </li>
               </ul>

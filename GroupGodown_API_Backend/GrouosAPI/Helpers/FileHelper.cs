@@ -2,65 +2,77 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Processing;
 
 namespace GrouosAPI.Helpers
 {
     public static class FileHelper
     {
-        private static readonly string[] ValidImageExtensions = { ".jpg", ".jpeg", ".png", ".gif" };
+        private static readonly string[] ValidImageExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
 
-        public static async Task<string> SaveImageAsync(IFormFile imageFile, string folderPath)
+        public static async Task<(string original, string thumbnail)> SaveImageWithThumbnailAsync(IFormFile imageFile, string folderPath, int thumbnailWidth = 300)
         {
             if (imageFile == null || imageFile.Length == 0)
-            {
                 throw new ArgumentException("Image file is not valid.");
-            }
 
-            // Validate file extension
             var extension = Path.GetExtension(imageFile.FileName).ToLowerInvariant();
             if (!Array.Exists(ValidImageExtensions, e => e.Equals(extension)))
-            {
                 throw new ArgumentException("Invalid image format.");
-            }
 
-            var imageName = $"{Guid.NewGuid()}{extension}";
-            var imagePath = Path.Combine(folderPath, imageName);
+            var originalName = $"{Guid.NewGuid()}{extension}";
+            var thumbName = $"{Path.GetFileNameWithoutExtension(originalName)}_thumb{extension}";
+
+            var originalPath = Path.Combine(folderPath, originalName);
+            var thumbPath = Path.Combine(folderPath, thumbName);
+
+            Directory.CreateDirectory(folderPath);
 
             try
             {
-                Directory.CreateDirectory(folderPath); // Ensure directory exists
-
-                using (var stream = new FileStream(imagePath, FileMode.Create))
+                // Save original
+                using (var stream = new FileStream(originalPath, FileMode.Create))
                 {
                     await imageFile.CopyToAsync(stream);
                 }
 
-                return imageName; // Consider returning full path or URL if needed
+                // Create thumbnail using ImageSharp
+                using (var image = await Image.LoadAsync(originalPath))
+                {
+                    int newHeight = (int)(image.Height * (thumbnailWidth / (float)image.Width));
+                    image.Mutate(x => x.Resize(thumbnailWidth, newHeight));
+
+                    await image.SaveAsync(thumbPath, new JpegEncoder { Quality = 80 });
+                }
+
+                return (originalName, thumbName);
             }
             catch (Exception ex)
             {
-                // Log exception (consider using a logging framework)
-                throw new IOException("Failed to save the image.", ex);
+                throw new IOException("Failed to save image and thumbnail.", ex);
             }
         }
 
         public static async Task<bool> DeleteImageAsync(string folderPath, string imageName)
         {
-            var fullPath = Path.Combine(folderPath, imageName);
-            if (File.Exists(fullPath))
+            if (string.IsNullOrWhiteSpace(imageName))
+                return false;
+
+            var originalPath = Path.Combine(folderPath, imageName);
+            var thumbPath = Path.Combine(folderPath, Path.GetFileNameWithoutExtension(imageName) + "_thumb" + Path.GetExtension(imageName));
+
+            try
             {
-                try
-                {
-                    File.Delete(fullPath);
-                    return await Task.FromResult(true);
-                }
-                catch (Exception ex)
-                {
-                    // Log exception (consider using a logging framework)
-                    throw new IOException("Failed to delete the image.", ex);
-                }
+                if (File.Exists(originalPath)) File.Delete(originalPath);
+                if (File.Exists(thumbPath)) File.Delete(thumbPath);
+                return await Task.FromResult(true);
             }
-            return false; // Return false if file does not exist
+            catch (Exception ex)
+            {
+                throw new IOException("Failed to delete the image or thumbnail.", ex);
+            }
         }
     }
 }
+

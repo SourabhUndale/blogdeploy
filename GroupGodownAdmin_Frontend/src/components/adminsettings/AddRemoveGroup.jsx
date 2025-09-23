@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import useDataFetch from "../../useDataFetch";
-import axios from "axios";
+import api from "../../utils/api"; // Use the custom Axios instance
 import languagesData from "../../../lang.json";
 import countryData from "../../../country-by-abbreviation.json"
 import { data } from "autoprefixer";
@@ -11,10 +11,14 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
+import { useNavigate } from "react-router-dom";
+import { isValidToken, redirectToLogin } from '../../utils/auth';
 
 function AddRemoveGroup() {
   const [open, setOpen] = useState(false);
   const [groupIdToDelete, setGroupIdToDelete] = useState(null);
+  const [deleteType, setDeleteType] = useState(null); // 'soft' or 'hard'
+  const navigate = useNavigate();
 
   const oBaseUri = JSON.parse(JSON.stringify(baselinks));
   const baseUri = oBaseUri.DefaultbaseUri;
@@ -25,35 +29,28 @@ function AddRemoveGroup() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = perPageitem;
-
-  // const handlePageChange = (page) => {
-  //   setCurrentPage(page);
-  // };
+  const [itemsPerPage, setItemsPerPage] = useState(perPageitem);
+  const [goToPage, setGoToPage] = useState("");
 
   const handlePageChange = useCallback((page) => {
     setCurrentPage(page);
   }, []);
 
-  // const handleClickOpen = (groupId) => {
-  //   setOpen(true);
-  //   console.log(groupId);
-  //   setGroupIdToDelete(groupId);
-  // };
-
-  const handleClickOpen = useCallback((groupId) => {
+  const handleClickOpen = useCallback((groupId, type) => {
     setOpen(true);
     setGroupIdToDelete(groupId);
+    setDeleteType(type);
   }, []);
-
-  // const handleClose = () => {
-  //   setOpen(false);
-  //   setGroupIdToDelete(null);
-  // };
 
   const handleClose = useCallback(() => {
     setOpen(false);
     setGroupIdToDelete(null);
+    setDeleteType(null);
+  }, []);
+
+  const handleItemsPerPageChange = useCallback((event) => {
+    setItemsPerPage(parseInt(event.target.value));
+    setCurrentPage(1); // Reset current page when changing items per page
   }, []);
 
   const { data: apiResponse, loading: countriesLoading } = useDataFetch(
@@ -71,7 +68,6 @@ function AddRemoveGroup() {
   const { data: applicationtype, loading: applicationTypesLoading } =
     useDataFetch(`${baseUri}api/Application`, []);
 
-  /////////////////////////////////////////////////////////////////////////
 
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedCountry, setSelectedCountry] = useState("");
@@ -87,10 +83,15 @@ function AddRemoveGroup() {
   const [selectedLanguageError, setSelectedLanguageError] = useState("");
   const [selectedApplicationTypeError, setSelectedApplicationTypeError] =
     useState("");
-  const [jwtToken, setJwtToken] = useState();
+  // const [jwtToken, setJwtToken] = useState(); // Remove this line
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
+
+    if (!isValidToken()) {
+      redirectToLogin();
+      return;
+    }
 
     let formIsValid = true;
 
@@ -146,21 +147,26 @@ function AddRemoveGroup() {
         tags: tags,
       };
 
-      console.log(requestData);
+      
 
       // Make the API call using Axios
-      const response = await axios.post(
-        `${baseUri}api/Groups?catId=${selectedCategory}&appid=${selectedApplicationType}`,
-        requestData
+      const response = await api.post(
+        `${baseUri}groups?catId=${selectedCategory}&appid=${selectedApplicationType}`,
+        requestData,
+        {
+          headers: {
+            Authorization: `Bearer ${sessionStorage.getItem('bearerToken')}`,
+          },
+        }
       );
 
       if (response.status === 200) {
         const resData = JSON.parse(JSON.stringify(response.data));
 
         if (resData.message != null) {
-          console.log(resData);
+          //console.log(resData);
           alert(resData.message);
-          console.log("Already exists");
+          //console.log("Already exists");
         }
 
         if (resData.message === null) {
@@ -173,33 +179,30 @@ function AddRemoveGroup() {
           setSelectedApplicationType("");
           setTags("");
           setGroupInformation("");
+          fetchDataFromAPI(); // Refresh data after successful addition
         }
       }
 
       if (response.data === "Group not valid") {
-        console.log(response.data);
+        //console.log(response.data);
         alert("Group link not valid");
       }
     } catch (error) {
-      if (error.response.status === 401) {
-        window.location = "/";
-      }
-      // Handle error response
-      console.error("API call failed:", error);
+      // The Axios interceptor will handle 401 errors globally
+      //console.error("API call failed:", error);
       // You can also handle errors by showing an error message to the user
     }
   };
 
-  /////////////////////////////////////////////////////////////////////////
 
   const [groups, setGroups] = useState([]);
   const [error, setError] = useState([]);
 
   useEffect(() => {
-    const token = sessionStorage.getItem("bearerToken");
-    if (token) {
-      setJwtToken(token);
-    }
+    // const token = sessionStorage.getItem("bearerToken"); // Remove this block
+    // if (token) {
+    //   setJwtToken(token);
+    // }
   }, []);
 
   useEffect(() => {
@@ -209,7 +212,7 @@ function AddRemoveGroup() {
   // Function to fetch data from the API
   const fetchDataFromAPI = async () => {
     try {
-      const apiUrl = `${baseUri}api/Groups/id/Groups`;
+      const apiUrl = `${baseUri}odata/Groups?$expand=Reports,Application,Category`;
       const response = await fetch(apiUrl);
 
       if (!response.ok) {
@@ -217,63 +220,86 @@ function AddRemoveGroup() {
       }
 
       const data = await response.json();
-      setGroups(data.reverse());
+      setGroups(data.value.reverse()); // Accessing the 'value' array
       setError(null);
     } catch (error) {
       setError(error);
-      console.error("Error fetching initial API data:", error);
+      //console.error("Error fetching initial API data:", error);
     }
   };
 
-  // const handleSearchChange = (event) => {
-  //   setSearchQuery(event.target.value);
-  //   setCurrentPage(1);
-  // };
+  
 
   const handleSearchChange = useCallback((event) => {
     setSearchQuery(event.target.value);
     setCurrentPage(1);
   }, []);
 
-  // const filteredData = groups.filter((item) =>
-  //   item.groupName.toLowerCase().includes(searchQuery.toLowerCase())
-  // );
+
 
   const filteredData = useMemo(() => {
     return groups.filter((item) => 
     item.groupName.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  },[groups,searchQuery]);
-
-  // const numPages =
-  //   Math.ceil(filteredData.length / itemsPerPage) < 1
-  //     ? 1
-  //     : Math.ceil(filteredData.length / itemsPerPage);
+  },[groups,searchQuery,itemsPerPage]);
 
   const numPages = useMemo(() => {
     return Math.ceil(filteredData.length / itemsPerPage) < 1
       ? 1
       : Math.ceil(filteredData.length / itemsPerPage);
   }, [filteredData, itemsPerPage]);
-  ///////////////////////////////////////////////////
 
-  const deleteGroup = useCallback(async () => {
-      // alert("Delete Button Clicked");
-      //console.log(`Delete Button Clicked ${groupId}`)
-  
+  const getPagination = useCallback(() => {
+    const pages = [];
+    if (numPages <= 3) {
+      for (let i = 1; i <= numPages; i++) pages.push(i);
+    } else {
+      if (currentPage === 1) {
+        pages.push(1, 2, 3);
+      } else if (currentPage === numPages) {
+        pages.push(numPages - 2, numPages - 1, numPages);
+      } else {
+        pages.push(currentPage - 1, currentPage, currentPage + 1);
+      }
+    }
+    return pages;
+  }, [numPages, currentPage]);
+ 
+  const handleGoToPageChange = (e) => {
+    setGoToPage(e.target.value.replace(/[^0-9]/g, ""));
+  };
+ 
+  const handleGoToPage = () => {
+    const page = parseInt(goToPage, 10);
+    if (!isNaN(page) && page >= 1 && page <= numPages) {
+      setCurrentPage(page);
+    }
+    setGoToPage("");
+  };
+ 
+  const handleGoToPageKeyDown = (e) => {
+    if (e.key === "Enter") {
+      handleGoToPage();
+    }
+  };
+
+
+  const softDeleteGroup = useCallback(async () => {
+    if (!isValidToken()) {
+      redirectToLogin();
+      return;
+    }
       if (!groupIdToDelete) return;
   
       try {
         const authToken = sessionStorage.getItem("bearerToken");
-        console.log(authToken);
-        console.log(groupIdToDelete);
+        //console.log(authToken);
+        //console.log(groupIdToDelete);
         if (!authToken) {
           throw new Error("Token Not Found");
         }
-        const response = await axios.delete(
-          `${baseUri}api/Groups/${groupIdToDelete}`,
-          // `https://localhost:7135/api/Groups/${groupId}`,
-          // { id: groupIdToDelete },
+        const response = await api.delete(
+          `${baseUri}groups/${groupIdToDelete}`,
           {
             headers: {
               Authorization: `Bearer ${authToken}`,
@@ -282,20 +308,58 @@ function AddRemoveGroup() {
         );
   
         if (response.status === 200) {
-          console.log(response); // Log the response from the server
+          //console.log(response); // Log the response from the server
           alert("Group deleted successfully"); // Notify the user
           setOpen(false);
           setGroupIdToDelete(null);
+          setDeleteType(null);
           fetchDataFromAPI();
+          setGroups(groups.filter(group => group.groupId !== groupIdToDelete));
         }
       } catch (error) {
-        console.error("Error deleting group:", error);
+        //console.error("Error deleting group:", error);
         // Handle errors, e.g., display an error message to the user
         alert("Error deleting group. Please try again.");
       }
-    },[baseUri, groupIdToDelete, fetchDataFromAPI]);
+    },[baseUri, groupIdToDelete, fetchDataFromAPI, setGroups, groups]);
 
-  //////////////////////////////////////////////////
+  const hardDeleteGroup = useCallback(async () => {
+    if (!isValidToken()) {
+      redirectToLogin();
+      return;
+    }
+    if (!groupIdToDelete) return;
+
+    try {
+      const authToken = sessionStorage.getItem("bearerToken");
+      //console.log(authToken);
+      //console.log(groupIdToDelete);
+      if (!authToken) {
+        throw new Error("Token Not Found");
+      }
+      const response = await api.delete(
+        `https://localhost:7134/groups/harddelete/${groupIdToDelete}`,
+        {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        }
+      );
+
+      if (response.status === 200) {
+        //console.log(response); // Log the response from the server
+        alert("Group hard deleted successfully"); // Notify the user
+        setOpen(false);
+        setGroupIdToDelete(null);
+        setDeleteType(null);
+        fetchDataFromAPI();
+        setGroups(groups.filter(group => group.groupId !== groupIdToDelete));
+      }
+    } catch (error) {
+      //console.error("Error hard deleting group:", error);
+      alert("Error hard deleting group. Please try again.");
+    }
+  }, [groupIdToDelete, fetchDataFromAPI, setGroups, groups]);
 
   return (
     <>
@@ -304,12 +368,12 @@ function AddRemoveGroup() {
         <div className="addgroup-main-div p-4">
           <div className="sub-div">
             <div className="mb-3">
-              <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+              <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-black">
                 Add Group Link
               </label>
               <input
                 type="text"
-                className={`block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-white dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer ${
+                className={`block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 text-black-500 dark:text-black-400appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer ${
                   groupLinkError ? "is-invalid" : ""
                 }`}
                 placeholder=" "
@@ -327,7 +391,7 @@ function AddRemoveGroup() {
           </div>
 
           <div className="mb-3">
-            <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+            <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-black">
               Select Category
             </label>
             <select
@@ -344,16 +408,11 @@ function AddRemoveGroup() {
               }}
             >
               <option>Select</option>
-              {/* {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))} */}
               {categories
-                .sort((a, b) => a.name.localeCompare(b.name)) // Sort categories alphabetically by name
+                .sort((a, b) => a.catName.localeCompare(b.catName)) // Sort categories alphabetically by name
                 .map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
+                  <option key={category.catId} value={category.catId}>
+                    {category.catName}
                   </option>
                 ))}
             </select>
@@ -362,7 +421,7 @@ function AddRemoveGroup() {
             )}
           </div>
           <div className="mb-3">
-            <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white mt-2">
+            <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-black mt-2">
               Select Country
             </label>
             <select
@@ -378,11 +437,7 @@ function AddRemoveGroup() {
               }}
             >
               <option>Select</option>
-              {/* {countries.map((country) => (
-                <option key={country.id} value={country.name}>
-                  {country.name}
-                </option> */}
-
+            
                 {countryData.map(({ abbreviation, country }) => (
                 <option key={abbreviation} value={country}>
                   {country}
@@ -399,7 +454,7 @@ function AddRemoveGroup() {
           </div>
 
           <div className="mb-3">
-            <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white mt-2">
+            <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-black mt-2">
               Select Language
             </label>
             <select
@@ -427,7 +482,7 @@ function AddRemoveGroup() {
           </div>
 
           <div className="mb-3">
-            <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white mt-2">
+            <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-black mt-2">
               Select Application Type
             </label>
             <select
@@ -457,13 +512,13 @@ function AddRemoveGroup() {
           </div>
 
           <div className="mb-3">
-            <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+            <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-black">
               Tags
             </label>
             <input
               type="text"
               id="tagsInput"
-              className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-white dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
+              className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 text-black-500 dark:text-black-400appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
               placeholder=" "
               value={tags}
               onChange={(e) => setTags(e.target.value)}
@@ -471,13 +526,13 @@ function AddRemoveGroup() {
           </div>
 
           <div className="mb-3">
-            <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+            <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-black">
               Group Description
             </label>
             <input
               id="groupInformationInput"
               type="text"
-              className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-white dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
+              className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 text-black-500 dark:text-black-400appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
               value={groupInformation}
               onChange={(e) => setGroupInformation(e.target.value)}
               placeholder=" "
@@ -491,20 +546,9 @@ function AddRemoveGroup() {
             >
               Add
             </button>
-            {/* <button className="text-white bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 shadow-lg shadow-blue-500/50 dark:shadow-lg dark:shadow-blue-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2">
-              Search
-            </button> */}
           </div>
         </div>
       </form>
-      {/* <div className="mt-6">
-        <button className="text-white bg-gradient-to-r from-green-400 via-green-500 to-green-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-green-300 dark:focus:ring-green-800 shadow-lg shadow-green-500/50 dark:shadow-lg dark:shadow-green-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2">
-          Add
-        </button>
-        <button className="text-white bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 shadow-lg shadow-blue-500/50 dark:shadow-lg dark:shadow-blue-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2">
-          Search
-        </button>
-      </div> */}
 
       <div className="flex flex-col mt-7">
         <div className="-m-1.5 overflow-x-auto">
@@ -545,54 +589,51 @@ function AddRemoveGroup() {
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-center">
                   <thead className="bg-gray-50 dark:bg-gray-700">
                     <tr>
-                      {/* <th scope="col" className="py-3 px-4 pe-0">
-                        <div className="flex items-center h-5">
-                          <input
-                            id="hs-table-pagination-checkbox-all"
-                            type="checkbox"
-                            className="border-gray-200 rounded text-blue-600 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:checked:bg-blue-500 dark:checked:border-blue-500 dark:focus:ring-offset-gray-800"
-                          />
-                          <label
-                            for="hs-table-pagination-checkbox-all"
-                            className="sr-only"
-                          >
-                            Checkbox
-                          </label>
-                        </div>
-                      </th> */}
                       <th
                         scope="col"
-                        className="px-6 py-3 text-xs font-medium text-gray-500 uppercase"
+                        className="px-6 py-3 text-xs font-medium text-white uppercase"
                       >
                         Sr.no.
                       </th>
                       <th
                         scope="col"
-                        className="px-6 py-3  text-xs font-medium text-gray-500 uppercase"
+                        className="px-6 py-3 text-xs font-medium text-white uppercase"
                       >
                         Category Name
                       </th>
                       <th
                         scope="col"
-                        className="px-6 py-3 text-xs font-medium text-gray-500 uppercase"
+                        className="px-6 py-3 text-xs font-medium text-white uppercase"
                       >
                         Application Type
                       </th>
                       <th
                         scope="col"
-                        className="px-6 py-3 text-xs font-medium text-gray-500 uppercase"
+                        className="px-6 py-3 text-xs font-medium text-white uppercase"
+                      >
+                        Country
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-xs font-medium text-white uppercase"
+                      >
+                        Language
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-xs font-medium text-white uppercase"
                       >
                         Group Name
                       </th>
                       <th
                         scope="col"
-                        className="px-6 py-3 text-xs font-medium text-gray-500 uppercase"
+                        className="px-6 py-3 text-xs font-medium text-white uppercase"
                       >
                         Group Link
                       </th>
                       <th
                         scope="col"
-                        className="px-6 py-3 text-xs font-medium text-gray-500 uppercase"
+                        className="px-6 py-3 text-xs font-medium text-white uppercase"
                       >
                         Remove
                       </th>
@@ -610,44 +651,46 @@ function AddRemoveGroup() {
 
                         return (
                           <tr key={index}>
-                            {/* <td className="py-3 ps-4">
-                              <div className="flex items-center h-5">
-                                <input
-                                  id={`hs-table-pagination-checkbox-${serialNumber}`}
-                                  type="checkbox"
-                                  className="border-gray-200 rounded text-blue-600 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:checked:bg-blue-500 dark:checked:border-blue-500 dark:focus:ring-offset-gray-800"
-                                />
-                                <label
-                                  htmlFor={`hs-table-pagination-checkbox-${serialNumber}`}
-                                  className="sr-only"
-                                >
-                                  Checkbox
-                                </label>
-                              </div>
-                            </td> */}
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-200">
+                          
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
                               {serialNumber}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
-                              {group.catName}
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
+                              {group.Category.catName}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
-                              Whatsapp
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
+                              {group.Application.appName}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
+                              {group.country}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
+                              {group.Language}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
                               {group.groupName}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
-                              <a href="#">{group.groupLink}</a>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
+                              <a href={`${group.groupLink}`} target="_blank" rel="noopener noreferrer">{group.groupLink}</a>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
+                              <button
+                                className="text-white bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 shadow-lg shadow-blue-500/50 dark:shadow-lg dark:shadow-blue-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2"
+                                onClick={() => navigate(`/adminsettings/updategroup/${group.groupId}`)}
+                              >
+                                Update
+                              </button>
                               <button
                                 className="text-white bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-red-300 dark:focus:ring-red-800 shadow-lg shadow-red-500/50 dark:shadow-lg dark:shadow-red-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2"
-                                // onClick={() => deleteGroup(group.groupId)}
-                                // onClick={handleClickOpen}
-                                onClick={() => handleClickOpen(group.groupId)}
+                                onClick={() => handleClickOpen(group.groupId, 'soft')}
                               >
                                 Remove
+                              </button>
+                              <button
+                                className="text-white bg-gradient-to-r from-red-700 via-red-800 to-red-900 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-red-300 dark:focus:ring-red-800 shadow-lg shadow-red-500/50 dark:shadow-lg dark:shadow-red-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2"
+                                onClick={() => handleClickOpen(group.groupId, 'hard')}
+                              >
+                                Hard Delete
                               </button>
                               <Dialog
                                 open={open}
@@ -656,16 +699,16 @@ function AddRemoveGroup() {
                                 aria-describedby="alert-dialog-description"
                               >
                                 <DialogTitle id="alert-dialog-title">
-                                  {"Remove Group"}
+                                  {deleteType === 'hard' ? "Hard Delete Group" : "Remove Group"}
                                 </DialogTitle>
                                 <DialogContent>
                                   <DialogContentText id="alert-dialog-description">
-                                    Do you really want to delete the group?
+                                    {deleteType === 'hard' ? "Do you really want to permanently delete the group?" : "Do you really want to delete the group?"}
                                   </DialogContentText>
                                 </DialogContent>
                                 <DialogActions>
                                   <Button onClick={handleClose}>No</Button>
-                                  <Button onClick={deleteGroup} autoFocus>
+                                  <Button onClick={deleteType === 'hard' ? hardDeleteGroup : softDeleteGroup} autoFocus>
                                     Yes
                                   </Button>
                                 </DialogActions>
@@ -678,50 +721,82 @@ function AddRemoveGroup() {
                 </table>
               </div>
               <div className="py-1 px-4">
-                <nav className="flex items-center space-x-1">
-                  <button
-                    type="button"
-                    className="p-2.5 inline-flex items-center gap-x-2 text-sm rounded-full text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none dark:text-white dark:hover:bg-white/10 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600 page-link"
-                    onClick={() =>
-                      handlePageChange(
-                        currentPage - 1 > 0 ? currentPage - 1 : 1
-                      )
-                    }
-                    disabled={currentPage === 1}
-                  >
-                    <span aria-hidden="true">«</span>
-                    <span className="sr-only">Previous</span>
-                  </button>
-                  {Array.from({
-                    length: numPages,
-                  }).map((_, index) => (
+                <nav className="flex flex-wrap items-center justify-between w-full">
+                  <div className="flex items-center space-x-1">
                     <button
-                      key={index}
                       type="button"
-                      className={`min-w-[40px] flex justify-center items-center text-gray-800 hover:bg-gray-100 py-2.5 text-sm rounded-full disabled:opacity-50 disabled:pointer-events-none dark:text-white dark:hover:bg-white/10 page-link ${
-                        currentPage === index + 1 ? "active" : ""
-                      }`}
-                      aria-current={
-                        currentPage === index + 1 ? "page" : undefined
+                      className="p-2.5 inline-flex items-center gap-x-2 text-sm rounded-full text-gray-800 bg-gray-200 dark:text-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:pointer-events-none dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
+                      onClick={() =>
+                        handlePageChange(
+                          currentPage - 1 > 0 ? currentPage - 1 : 1
+                        )
                       }
-                      onClick={() => handlePageChange(index + 1)}
+                      disabled={currentPage === 1}
                     >
-                      {index + 1}
+                      <span aria-hidden="true">«</span>
+                      <span className="sr-only">Previous</span>
                     </button>
-                  ))}
-                  <button
-                    type="button"
-                    className="p-2.5 inline-flex items-center gap-x-2 text-sm rounded-full text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none dark:text-white dark:hover:bg-white/10 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600 page-link"
-                    onClick={() =>
-                      handlePageChange(
-                        currentPage + 1 <= numPages ? currentPage + 1 : numPages
+                    {getPagination().map((page, idx) =>
+                      page === "..." ? (
+                        <span key={"ellipsis-" + idx} className="px-2">...</span>
+                      ) : (
+                        <button
+                          key={page}
+                          type="button"
+                          className={`min-w-[40px] flex justify-center items-center text-gray-800 bg-gray-200 dark:text-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 py-2.5 text-sm rounded-full disabled:opacity-50 disabled:pointer-events-none ${
+                            currentPage === page ? "bg-blue-500 text-white dark:bg-blue-400 dark:text-gray-900" : ""
+                          }`}
+                          onClick={() => handlePageChange(page)}
+                          disabled={currentPage === page}
+                        >
+                          {page}
+                        </button>
                       )
-                    }
-                    disabled={currentPage === numPages}
-                  >
-                    <span className="sr-only">Next</span>
-                    <span aria-hidden="true">»</span>
-                  </button>
+                    )}
+                    <button
+                      type="button"
+                      className="p-2.5 inline-flex items-center gap-x-2 text-sm rounded-full text-gray-800 bg-gray-200 dark:text-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:pointer-events-none dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
+                      onClick={() =>
+                        handlePageChange(
+                          currentPage + 1 <= numPages
+                            ? currentPage + 1
+                            : numPages
+                        )
+                      }
+                      disabled={currentPage === numPages}
+                    >
+                      <span className="sr-only">Next</span>
+                      <span aria-hidden="true">»</span>
+                    </button>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      value={goToPage}
+                      onChange={handleGoToPageChange}
+                      onKeyDown={handleGoToPageKeyDown}
+                      placeholder="Go to page"
+                      className="w-20 p-2 border rounded text-sm text-gray-800 focus:ring-1 focus:ring-gray-600"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleGoToPage}
+                      className="px-3 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                    >
+                      Go
+                    </button>
+                    <select
+                      value={itemsPerPage}
+                      onChange={handleItemsPerPageChange}
+                      className="p-2.5 border rounded text-sm text-gray-800 focus:ring-1 focus:ring-gray-600"
+                    >
+                      {[10, 20, 30, 40, 50].map((perPageOption) => (
+                        <option key={perPageOption} value={perPageOption}>
+                          {perPageOption} per page
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </nav>
               </div>
             </div>

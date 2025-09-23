@@ -24,8 +24,8 @@ namespace GrouosAPI.Repository
             {
                 categoriesDto.Add(new CategoryDto()
                 {
-                    id = category.catId,
-                    name = category.catName
+                    catId = category.catId,
+                    catName = category.catName
                 });
             }
             return categoriesDto;    
@@ -40,8 +40,8 @@ namespace GrouosAPI.Repository
             }
             var categoryDto = new CategoryDto()
             {
-                id = category.catId,
-                name = category.catName
+                catId = category.catId,
+                catName = category.catName
             };
 
             return categoryDto;
@@ -94,7 +94,8 @@ namespace GrouosAPI.Repository
                 {
                     groupId = group.groupId,
                     groupName = group.groupName,
-                    catName = category.catName,
+                    GroupImage = group.GroupImage,
+                    Category = new CategoryDto { catId = category.catId, catName = category.catName },
                     groupDesc = group.groupDesc,
                     groupLink = group.groupLink,
                     groupRules = group.groupRules,
@@ -121,8 +122,8 @@ namespace GrouosAPI.Repository
 
             var categoryDto = new CategoryDto
             {
-                id = category.catId,
-                name = category.catName
+                catId = category.catId,
+                catName = category.catName
             };
             return categoryDto;
         }

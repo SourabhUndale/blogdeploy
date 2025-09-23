@@ -20,6 +20,7 @@ import { HelmetProvider } from "react-helmet-async";
 import FAQ from "./components/FAQ/FAQ.jsx";
 import Blog from "./components/Blog/Blog.jsx";
 import BlogDetail from "./components/Blog/BlogDetail.jsx";
+import Disclaimer from "./components/Disclaimer/Disclaimer.jsx";
 
 
 const router = createBrowserRouter(
@@ -31,6 +32,7 @@ const router = createBrowserRouter(
       <Route path="addgroup" element={<AddGroup />} />
       <Route path="terms" element={<Terms />} />
       <Route path="privacy" element={<Privacy />} />
+      <Route path="disclaimer" element={<Disclaimer />} />
       <Route path="contact" element={<Contact />} />
       <Route path="faq" element={<FAQ />} />
       <Route path="groupinvite/:id/:catId" element={<GroupInvite />} />
@@ -41,6 +43,10 @@ const router = createBrowserRouter(
       <Route path="groupinvite/*" element={<GroupInvite />} />
       <Route path="/blog" element={<Blog />} />
       <Route path="/blog/:titleSlug" element={<BlogDetail />} />
+      <Route path="/groups/country/:countryName" element={<Home />} />
+      <Route path="/groups/language/:languageName" element={<Home />} />
+      <Route path="/groups/category/:categoryName" element={<Home />} />
+      <Route path="/groups/find" element={<Home />} />
     </Route>
   )
 );

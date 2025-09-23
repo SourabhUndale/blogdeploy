@@ -4,140 +4,143 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using GrouosAPI.Models.DTO;
-using System;
 using GrouosAPI.Data;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
+using GrouosAPI.Models;
+using GrouosAPI.Interface;
+using Microsoft.AspNetCore.Http;
+using System;
+using System.IO;
 
 namespace GrouosAPI.Repository
 {
     public class BlogRepository : IBlogRepository
     {
-        private readonly DataContext DbContext;
+        private readonly DataContext _dbContext;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        private readonly IConfiguration _configuration;
-
-        public BlogRepository(DataContext dbContext, IConfiguration configuration)
+        public BlogRepository(DataContext dbContext, IHttpContextAccessor httpContextAccessor)
         {
-            DbContext = dbContext;
-            _configuration = configuration;
+            _dbContext = dbContext;
+            _httpContextAccessor = httpContextAccessor;
         }
 
-        public async Task<IEnumerable<Blog>> GetAllBlogsAsync(CancellationToken cancellationToken = default)
+        private string GetBaseUrl()
         {
-            // Fetch all blogs from the database
-            var blogList = await DbContext.Blogs.ToListAsync(cancellationToken);
+            var request = _httpContextAccessor.HttpContext.Request;
+            return $"{request.Scheme}://{request.Host}";
+        }
 
-
-            // Process each blog and fetch image asynchronously in parallel
-            var imageTasks = blogList.Select(async blog =>
+        private BlogResponseDto MapToDto(Blog b)
+        {
+            return new BlogResponseDto
             {
-                blog.ImageCon = await GetImageAsync(blog.Image);
-            }).ToList();
-
-            // Wait for all image fetching tasks to complete
-            await Task.WhenAll(imageTasks);
-
-            return blogList;
+                Id = b.Id,
+                Title = b.Title,
+                Description = b.Description,
+                MetaDescription = b.MetaDescription,
+                ImageUrl = string.IsNullOrEmpty(b.Image) ? null : $"{GetBaseUrl()}/images/{b.Image}",
+                ThumbnailUrl = string.IsNullOrEmpty(b.Image) ? null :
+                    $"{GetBaseUrl()}/images/{Path.GetFileNameWithoutExtension(b.Image)}_thumb{Path.GetExtension(b.Image)}",
+                AltText = b.AltText,
+                Date = b.Date
+            };
         }
 
-        public async Task<Blog> GetBlogByIdAsync(int id, CancellationToken cancellationToken = default)
-    {
-    // Fetch the blog entity by ID
-         var blog = await DbContext.Blogs.FindAsync(new object[] { id }, cancellationToken);
-         if (blog == null)
-    {
-        throw new KeyNotFoundException($"Blog with ID {id} not found.");
-    }
+        // ✅ Always fetch fresh from DB (no caching here)
+        public async Task<PagedBlogResponseDto> GetPagedBlogsAsync(int page, int pageSize, CancellationToken cancellationToken = default)
+        {
+            var query = _dbContext.Blogs.Where(b => b.isActive == true).AsNoTracking();
 
-    // Fetch the image content asynchronously
-        blog.ImageCon = await GetImageAsync(blog.Image);
+            var totalCount = await query.CountAsync(cancellationToken);
 
-    return blog;
-}
+            var list = await query
+                .OrderByDescending(b => b.Date)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
 
+            var blogDtos = list.Select(MapToDto).ToList();
 
+            return new PagedBlogResponseDto
+            {
+                Blogs = blogDtos,
+                TotalCount = totalCount
+            };
+        }
+
+        public async Task<BlogResponseDto> GetBlogByIdAsync(int id, CancellationToken cancellationToken = default)
+        {
+            var blog = await _dbContext.Blogs.Where(b => b.isActive == true)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(b => b.Id == id, cancellationToken);
+
+            return blog == null ? null : MapToDto(blog);
+        }
+
+        // public async Task<BlogResponseDto> GetBlogByTitleAsync(string title, CancellationToken cancellationToken)
+        // {
+        //     var blog = await _dbContext.Blogs
+        //         .AsNoTracking()
+        //         .FirstOrDefaultAsync(b => b.Title == title, cancellationToken);
+
+        //     return blog == null ? null : MapToDto(blog);
+        // }
+
+        public async Task<BlogResponseDto> GetBlogByTitleAsync(string title, CancellationToken cancellationToken)
+        {
+            title = title?.Trim(); // 🔑 normalize
+        
+            var blog = await _dbContext.Blogs.Where(b => b.isActive == true)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(b => b.Title == title, cancellationToken); // ✅ keep case-sensitive
+        
+            return blog == null ? null : MapToDto(blog);
+        }
 
 
         public async Task<Blog> AddBlogAsync(BlogDto blogDto, CancellationToken cancellationToken = default)
         {
-            // Map BlogDto to Blog model
             var blog = new Blog
             {
                 Title = blogDto.Title,
                 Description = blogDto.Description,
+                MetaDescription = blogDto.MetaDescription,
                 Date = blogDto.Date,
-                Image = blogDto.Image
+                Image = blogDto.Image,
+                AltText = blogDto.AltText
             };
 
-            // Add blog to database
-            DbContext.Blogs.Add(blog);
-            await DbContext.SaveChangesAsync(cancellationToken);
-
+            _dbContext.Blogs.Add(blog);
+            await _dbContext.SaveChangesAsync(cancellationToken);
             return blog;
         }
 
         public async Task<Blog> UpdateBlogAsync(int id, BlogDto blogDto, CancellationToken cancellationToken = default)
         {
-            // Find the existing blog by ID
-            var existingBlog = await DbContext.Blogs.FindAsync(new object[] { id }, cancellationToken);
+            var existingBlog = await _dbContext.Blogs.FindAsync(new object[] { id }, cancellationToken);
             if (existingBlog == null) return null;
 
-            // Update blog properties
             existingBlog.Title = blogDto.Title;
             existingBlog.Description = blogDto.Description;
+            existingBlog.MetaDescription = blogDto.MetaDescription;
             existingBlog.Date = blogDto.Date;
-            if (!string.IsNullOrEmpty(blogDto.Image))
-            {
-                existingBlog.Image = blogDto.Image;
-            }
+            existingBlog.AltText = blogDto.AltText;
 
-            await DbContext.SaveChangesAsync(cancellationToken);
+            if (!string.IsNullOrEmpty(blogDto.Image))
+                existingBlog.Image = blogDto.Image;
+
+            await _dbContext.SaveChangesAsync(cancellationToken);
             return existingBlog;
         }
 
         public async Task<bool> DeleteBlogAsync(int id, CancellationToken cancellationToken = default)
         {
-            // Find the blog by ID
-            var existingBlog = await DbContext.Blogs.FindAsync(new object[] { id }, cancellationToken);
+            var existingBlog = await _dbContext.Blogs.FindAsync(new object[] { id }, cancellationToken);
             if (existingBlog == null) return false;
 
-            // Remove the blog
-            DbContext.Blogs.Remove(existingBlog);
-            await DbContext.SaveChangesAsync(cancellationToken);
+            existingBlog.isActive = false;
+            await _dbContext.SaveChangesAsync(cancellationToken);
             return true;
         }
-
-        public async Task<byte[]> GetImageAsync(string imageName)
-        {
-            var imageFolderPath = _configuration["ImageSettings:ImageFolderPath"];
-            var filePath = Path.Combine(imageFolderPath, imageName);
-
-            
-            if (!System.IO.File.Exists(filePath))
-            {
-                //throw new FileNotFoundException("Image not found.", filePath);
-                return null;
-            }
-
-            
-            return System.IO.File.ReadAllBytes(filePath);
-        }
-
-        public async Task<Blog> GetBlogByTitleAsync(string title, CancellationToken cancellationToken)
-        {
-            // Fetch the blog by title
-            var blog = await DbContext.Blogs.FirstOrDefaultAsync(b => b.Title == title, cancellationToken);
-
-            if (blog != null)
-            {
-                // Fetch and assign the image content
-                blog.ImageCon = await GetImageAsync(blog.Image);
-            }
-
-            return blog;
-        }
-
-
     }
 }

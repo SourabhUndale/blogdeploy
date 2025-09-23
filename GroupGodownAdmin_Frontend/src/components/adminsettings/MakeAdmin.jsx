@@ -1,5 +1,7 @@
 import { useState,useEffect,React } from "react";
 import baselinks from "../../../baselinks.json";
+import { isValidToken, redirectToLogin } from '../../utils/auth';
+import api from '../../utils/api'; // Import the custom Axios instance
 
 const oBaseUri = JSON.parse(JSON.stringify(baselinks));
 const baseUri = oBaseUri.DefaultbaseUri;
@@ -31,13 +33,7 @@ function MakeAdmin() {
       ...prevData,
       [name]: value,
     }));
-    // if (name === "confirmPassword") {
-    //   if (value !== formData.password) {
-    //     setPasswordError("Passwords do not match");
-    //   } else {
-    //     setPasswordError("");
-    //   }
-    // }
+  
     if (name === "confirmPassword") {
       if (value !== formData.password) {
         setPasswordError("Passwords do not match");
@@ -53,6 +49,10 @@ function MakeAdmin() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!isValidToken()) {
+      redirectToLogin();
+      return;
+    }
     if (formData.password !== formData.confirmPassword) {
       setPasswordError("Passwords do not match");
       return;
@@ -62,17 +62,17 @@ function MakeAdmin() {
       const requestData = { fullName, middleName, lastName, userName, phno, email, password };
   
 
-      const response = await fetch(`${baseUri}/api/Admin`, {
+      const response = await api.post(`${baseUri}/api/Admin`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: "Bearer YOUR_ACCESS_TOKEN_HERE",
+          Authorization: `Bearer ${sessionStorage.getItem('bearerToken')}`,
         },
         body: JSON.stringify(requestData),
       });
       if (response.ok) {
         // Handle success
-        console.log("Admin created successfully!");
+        //console.log("Admin created successfully!");
         // Reset form data
         setFormData({
           fullName: "",
@@ -86,14 +86,11 @@ function MakeAdmin() {
         });
       } else {
         // Handle error
-        console.error("Failed to create admin");
+        //console.error("Failed to create admin");
       }
     } catch (error) {
-      if(error.response.status === 401)
-      {
-        window.location = '/';
-      }
-      console.error("Error:", error);
+      // The Axios interceptor will handle 401 errors globally
+      //console.error("Error:", error);
     }
   };
 
@@ -111,7 +108,7 @@ function MakeAdmin() {
             placeholder=" "
             required
           />
-          <label class="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6">
+          <label class="peer-focus:font-medium absolute text-sm text-black-500 dark:text-black-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6">
             User Name
           </label>
         </div>
@@ -125,7 +122,7 @@ function MakeAdmin() {
             placeholder=" "
             required
           />
-          <label class="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6">
+          <label class="peer-focus:font-medium absolute text-sm text-black-500 dark:text-black-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6">
             First Name
           </label>
         </div>
@@ -139,7 +136,7 @@ function MakeAdmin() {
             placeholder=" "
             required
           />
-          <label class="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6">
+          <label class="peer-focus:font-medium absolute text-sm text-black-500 dark:text-black-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6">
             Middle Name
           </label>
         </div>
@@ -153,7 +150,7 @@ function MakeAdmin() {
             placeholder=" "
             required
           />
-          <label class="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6">
+          <label class="peer-focus:font-medium absolute text-sm text-black-500 dark:text-black-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6">
             Last Name
           </label>
         </div>
@@ -169,7 +166,7 @@ function MakeAdmin() {
               placeholder=" "
               required
             />
-            <label class="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6">
+            <label class="peer-focus:font-medium absolute text-sm text-black-500 dark:text-black-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6">
               Phone Number
             </label>
           </div>
@@ -183,7 +180,7 @@ function MakeAdmin() {
               placeholder=" "
               required
             />
-            <label class="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6">
+            <label class="peer-focus:font-medium absolute text-sm text-black-500 dark:text-black-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6">
               Email
             </label>
           </div>
@@ -199,7 +196,7 @@ function MakeAdmin() {
               placeholder=" "
               required
             />
-            <label class="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6">
+            <label class="peer-focus:font-medium absolute text-sm text-black-500 dark:text-black-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6">
               Password
             </label>
           </div>
@@ -215,7 +212,7 @@ function MakeAdmin() {
               placeholder=" "
               required
             />
-            <label class="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6">
+            <label class="peer-focus:font-medium absolute text-sm text-black-500 dark:text-black-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6">
               Confirm Password
             </label>
             {passwordError && (

@@ -16,7 +16,7 @@ const perPageitem = oBaseUri.records;
 async function fetchData() {
   try {
     const response = await fetch(
-      `${baseUri}odata/Groups?$expand=Reports,Application`,
+      `${baseUri}odata/Groups?$expand=Reports,Application,Category`,
       {
         method: "GET",
         headers: {
@@ -31,7 +31,7 @@ async function fetchData() {
     if (error.response && error.response.status === 401) {
       window.location = "/";
     } else {
-      console.error("Error fetching data:", error);
+      //console.error("Error fetching data:", error);
     }
     return [];
   }
@@ -40,34 +40,25 @@ async function fetchData() {
 function UnreportedGroupsTable() {
   const [open, setOpen] = useState(false);
   const [groupIdToDelete, setGroupIdToDelete] = useState(null);
+  const [deleteType, setDeleteType] = useState(null); // 'soft' or 'hard'
   const [data, setData] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [groups, setGroups] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(perPageitem);
+  const [goToPage, setGoToPage] = useState("");
 
-  // useEffect(() => {
-  //   async function getData() {
-  //     const result = await fetchData();
-  //     // Filter out groups with reports
-  //     const groupsWithReports = result.filter(
-  //       (group) => group.Reports.length == 0
-  //     );
-  //     setData(groupsWithReports);
-  //   }
-  //   getData();
-  // }, []);
+ 
 
   useEffect(() => {
     fetchData().then((result) => {
-      setData(result);
-      setGroups(result);
+      const sortedResult = result ? result.reverse() : [];
+      setData(sortedResult);
+      setGroups(sortedResult);
     });
   }, []);
 
-  // Pagination
-  // const itemsPerPage = perPageitem;
-
+  
   const handlePageChange = useCallback((page) => {
     setCurrentPage(page);
   }, []);
@@ -77,14 +68,16 @@ function UnreportedGroupsTable() {
     setCurrentPage(1);
   }, []);
 
-  const handleClickOpen = useCallback((groupId) => {
+  const handleClickOpen = useCallback((groupId, type) => {
     setOpen(true);
     setGroupIdToDelete(groupId);
+    setDeleteType(type);
   }, []);
 
   const handleClose = useCallback(() => {
     setOpen(false);
     setGroupIdToDelete(null);
+    setDeleteType(null);
   }, []);
 
   const handleItemsPerPageChange = useCallback((event) => {
@@ -104,53 +97,49 @@ function UnreportedGroupsTable() {
       : Math.ceil(filteredData.length / itemsPerPage);
   }, [filteredData, itemsPerPage]);
 
-  // const deleteGroup = async() =>{
-  //   // alert("Delete Button Clicked");
-  //   //console.log(`Delete Button Clicked ${groupId}`)
+  const getPagination = useCallback(() => {
+    const pages = [];
+    if (numPages <= 3) {
+      for (let i = 1; i <= numPages; i++) pages.push(i);
+    } else {
+      if (currentPage === 1) {
+        pages.push(1, 2, 3);
+      } else if (currentPage === numPages) {
+        pages.push(numPages - 2, numPages - 1, numPages);
+      } else {
+        pages.push(currentPage - 1, currentPage, currentPage + 1);
+      }
+    }
+    return pages;
+  }, [numPages, currentPage]);
 
-  //   if(!groupIdToDelete) return;
+  const handleGoToPageChange = (e) => {
+    setGoToPage(e.target.value.replace(/[^0-9]/g, ""));
+  };
 
-  //   try{
-  //     const authToken = sessionStorage.getItem('bearerToken');
-  //     console.log(authToken);
-  //     console.log(groupIdToDelete);
-  //     if(!authToken){
-  //       throw new Error('Token Not Found');
-  //     }
-  //     const response = await axios.delete(
-  //       `${baseUri}api/Groups/${groupIdToDelete}`,
-  //       // `https://localhost:7135/api/Groups/${groupId}`,
-  //       {id : groupIdToDelete},
-  //       {
-  //         headers: {
-  //           'Authorization': `Bearer ${jwtToken}`
-  //         },
-  //       }
-  //     );
+  const handleGoToPage = () => {
+    const page = parseInt(goToPage, 10);
+    if (!isNaN(page) && page >= 1 && page <= numPages) {
+      setCurrentPage(page);
+    }
+    setGoToPage("");
+  };
 
-  //     if(response.status === 200){
-  //       console.log(response); // Log the response from the server
-  //       alert('Group deleted successfully'); // Notify the user
-  //       fetchDataFromAPI();
-  //       setOpen(false);
-  //     }
-  //   }
-  //   catch(error)
-  //   {
-  //     console.error('Error deleting group:', error);
-  //     // Handle errors, e.g., display an error message to the user
-  //     alert('Error deleting group. Please try again.');
-  //   }
-  // }
+  const handleGoToPageKeyDown = (e) => {
+    if (e.key === "Enter") {
+      handleGoToPage();
+    }
+  };
 
-  const deleteGroup = useCallback(async () => {
+
+  const softDeleteGroup = useCallback(async () => {
     if (!groupIdToDelete) return;
 
     try {
       const authToken = sessionStorage.getItem("bearerToken");
       if (!authToken) throw new Error("Token Not Found");
 
-      await axios.delete(`${baseUri}api/Groups/${groupIdToDelete}`, {
+      await axios.delete(`${baseUri}groups/${groupIdToDelete}`, {
         headers: {
           Authorization: `Bearer ${authToken}`,
         },
@@ -163,11 +152,38 @@ function UnreportedGroupsTable() {
 
       setOpen(false);
       setGroupIdToDelete(null);
+      setDeleteType(null);
     } catch (error) {
-      console.error("Error deleting group:", error);
+      //console.error("Error deleting group:", error);
       alert("Error deleting group. Please try again.");
     }
   }, [baseUri, groupIdToDelete]);
+
+  const hardDeleteGroup = useCallback(async () => {
+    if (!groupIdToDelete) return;
+
+    try {
+      const authToken = sessionStorage.getItem("bearerToken");
+      if (!authToken) throw new Error("Token Not Found");
+
+      await axios.delete(`https://localhost:7134/groups/harddelete/${groupIdToDelete}`, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+
+      const newData = await fetchData();
+      setData(newData);
+      setGroups(newData);
+
+      setOpen(false);
+      setGroupIdToDelete(null);
+      setDeleteType(null);
+    } catch (error) {
+      //console.error("Error hard deleting group:", error);
+      alert("Error hard deleting group. Please try again.");
+    }
+  }, [groupIdToDelete]);
 
   return (
     <div>
@@ -212,66 +228,53 @@ function UnreportedGroupsTable() {
                   <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-center">
                     <thead className="bg-gray-50 dark:bg-gray-700">
                       <tr>
-                        {/* <th scope="col" className="py-3 px-4 pe-0">
-                          <div className="flex items-center h-5">
-                            <input
-                              id="hs-table-pagination-checkbox-all"
-                              type="checkbox"
-                              className="border-gray-200 rounded text-blue-600 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:checked:bg-blue-500 dark:checked:border-blue-500 dark:focus:ring-offset-gray-800"
-                            />
-                            <label
-                              for="hs-table-pagination-checkbox-all"
-                              className="sr-only"
-                            >
-                              Checkbox
-                            </label>
-                          </div>
-                        </th> */}
+                     
                         <th
                           scope="col"
-                          className="px-6 py-3 text-xs font-medium text-gray-500 uppercase"
+                          className="px-6 py-3 text-xs font-medium text-white uppercase"
                         >
                           Sr.no.
                         </th>
                         <th
                           scope="col"
-                          className="px-6 py-3 text-xs font-medium text-gray-500 uppercase"
+                          className="px-6 py-3 text-xs font-medium text-white uppercase"
                         >
                           Group Name
                         </th>
                         <th
                           scope="col"
-                          className="px-6 py-3 text-xs font-medium text-gray-500 uppercase"
+                          className="px-6 py-3 text-xs font-medium text-white uppercase"
                         >
                           Group Links
                         </th>
                         <th
                           scope="col"
-                          className="px-6 py-3 text-xs font-medium text-gray-500 uppercase"
+                          className="px-6 py-3 text-xs font-medium text-white uppercase"
                         >
                           Country
                         </th>
                         <th
                           scope="col"
-                          className="px-6 py-3 text-xs font-medium text-gray-500 uppercase"
+                          className="px-6 py-3 text-xs font-medium text-white uppercase"
                         >
                           Language
                         </th>
                         <th
                           scope="col"
-                          className="px-6 py-3 text-xs font-medium text-gray-500 uppercase"
+                          className="px-6 py-3 text-xs font-medium text-white uppercase"
+                        >
+                          Category
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-xs font-medium text-white uppercase"
                         >
                           Application Type
                         </th>
-                        {/* <th
-                          scope="col"
-                          className="px-6 py-3 text-xs font-medium text-gray-500 uppercase"
-                        >
-                          Reports Count
-                        </th> */}
+                     
                         <th
                           scope="col"
-                          className="px-6 py-3 text-xs font-medium text-gray-500 uppercase"
+                          className="px-6 py-3 text-xs font-medium text-white uppercase"
                         >
                           Remove
                         </th>
@@ -288,52 +291,42 @@ function UnreportedGroupsTable() {
                             (currentPage - 1) * itemsPerPage + index + 1;
                           return (
                             <tr key={index}>
-                              {/* <td className="py-3 ps-4">
-                                <div className="flex items-center h-5">
-                                  <input
-                                    id={`hs-table-pagination-checkbox-1${serialNumber}`}
-                                    type="checkbox"
-                                    className="border-gray-200 rounded text-blue-600 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:checked:bg-blue-500 dark:checked:border-blue-500 dark:focus:ring-offset-gray-800"
-                                  />
-                                  <label
-                                    htmlFor={`hs-table-pagination-checkbox-1 ${serialNumber}`}
-                                    className="sr-only"
-                                  >
-                                    Checkbox
-                                  </label>
-                                </div>
-                              </td> */}
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-200">
+                            
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-black">
                                 {serialNumber}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
                                 {unreportedGrpData.groupName}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
-                                <a href={unreportedGrpData.groupLink} target="_blank" rel="noopener noreferrer">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
+                                <a className="text-black" href={unreportedGrpData.groupLink} target="_blank" rel="noopener noreferrer">
                                   {unreportedGrpData.groupLink}
                                 </a>
                               </td>
-
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
                                 {unreportedGrpData.country}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
                                 {unreportedGrpData.Language}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
+                                {unreportedGrpData.Category.catName}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
                                 {unreportedGrpData.Application.appName}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
                                 <button
                                   className="text-white bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-red-300 dark:focus:ring-red-800 shadow-lg shadow-red-500/50 dark:shadow-lg dark:shadow-red-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2"
-                                  // onClick={() => deleteGroup(group.groupId)}
-                                  // onClick={handleClickOpen}
-                                  // onClick={() => handleClickOpen(group.groupId)}
-
-                                  onClick={() => handleClickOpen(unreportedGrpData.groupId)}
+                                  onClick={() => handleClickOpen(unreportedGrpData.groupId, 'soft')}
                                 >
                                   Remove
+                                </button>
+                                <button
+                                  className="text-white bg-gradient-to-r from-red-700 via-red-800 to-red-900 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-red-300 dark:focus:ring-red-800 shadow-lg shadow-red-500/50 dark:shadow-lg dark:shadow-red-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2"
+                                  onClick={() => handleClickOpen(unreportedGrpData.groupId, 'hard')}
+                                >
+                                  Hard Delete
                                 </button>
                                 <Dialog
                                   open={open}
@@ -342,16 +335,16 @@ function UnreportedGroupsTable() {
                                   aria-describedby="alert-dialog-description"
                                 >
                                   <DialogTitle id="alert-dialog-title">
-                                    {"Remove Group"}
+                                    {deleteType === 'hard' ? "Hard Delete Group" : "Remove Group"}
                                   </DialogTitle>
                                   <DialogContent>
                                     <DialogContentText id="alert-dialog-description">
-                                      Do you really want to delete the group?
+                                      {deleteType === 'hard' ? "Do you really want to permanently delete the group?" : "Do you really want to delete the group?"}
                                     </DialogContentText>
                                   </DialogContent>
                                   <DialogActions>
                                     <Button onClick={handleClose}>No</Button>
-                                    <Button onClick={deleteGroup} autoFocus>
+                                    <Button onClick={deleteType === 'hard' ? hardDeleteGroup : softDeleteGroup} autoFocus>
                                       Yes
                                     </Button>
                                   </DialogActions>
@@ -364,61 +357,70 @@ function UnreportedGroupsTable() {
                   </table>
                 </div>
                 <div className="py-1 px-4">
-                  <nav className="flex items-center space-x-1">
-                    <button
-                      type="button"
-                      className="p-2.5 inline-flex items-center gap-x-2 text-sm rounded-full text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none dark:text-white dark:hover:bg-white/10 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
-                      onClick={() =>
-                        handlePageChange(
-                          currentPage - 1 > 0 ? currentPage - 1 : 1
-                        )
-                      }
-                      disabled={currentPage === 1}
-                    >
-                      <span aria-hidden="true">«</span>
-                      <span className="sr-only">Previous</span>
-                    </button>
-                    {Array.from({
-                      length: numPages,
-                    }).map((_, index) => (
+                  <nav className="flex flex-wrap items-center justify-between w-full">
+                    {/* Left: Pagination */}
+                    <div className="flex items-center space-x-1">
                       <button
                         type="button"
-                        className={`min-w-[40px] flex justify-center items-center text-gray-800 hover:bg-gray-100 py-2.5 text-sm rounded-full disabled:opacity-50 disabled:pointer-events-none dark:text-white dark:hover:bg-white/10 ${
-                          currentPage === index + 1 ? "active" : ""
-                        }`}
-                        onClick={() => handlePageChange(index + 1)}
+                        className="p-2.5 inline-flex items-center gap-x-2 text-sm rounded-full text-gray-800 bg-gray-200 dark:text-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:pointer-events-none dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
+                        onClick={() => handlePageChange(currentPage - 1 > 0 ? currentPage - 1 : 1)}
+                        disabled={currentPage === 1}
                       >
-                        {index + 1}
+                        <span aria-hidden="true">«</span>
+                        <span className="sr-only">Previous</span>
                       </button>
-                    ))}
-
-                    <button
-                      type="button"
-                      className="p-2.5 inline-flex items-center gap-x-2 text-sm rounded-full text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none dark:text-white dark:hover:bg-white/10 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
-                      onClick={() =>
-                        handlePageChange(
-                          currentPage + 1 <= numPages
-                            ? currentPage + 1
-                            : numPages
-                        )
-                      }
-                      disabled={currentPage === numPages}
-                    >
-                      <span className="sr-only">Next</span>
-                      <span aria-hidden="true">»</span>
-                    </button>
-                    {/* Dropdown for items per page */}
-                    <select
-                      value={itemsPerPage}
-                      onChange={handleItemsPerPageChange}
-                      className="p-2.5 border rounded text-sm text-gray-800 focus:ring-1 focus:ring-gray-600"
-                    >
-                      {[10, 20, 30, 40, 50].map((perPageOption) => (
-                        <option key={perPageOption} value={perPageOption}>
-                          {perPageOption} per page
-                        </option>
-                      ))}
-                    </select>
+                      {getPagination().map((page, idx) =>
+                        <button
+                          key={page}
+                          type="button"
+                          className={`min-w-[40px] flex justify-center items-center text-gray-800 bg-gray-200 dark:text-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 py-2.5 text-sm rounded-full disabled:opacity-50 disabled:pointer-events-none ${
+                            currentPage === page ? "bg-blue-500 text-white dark:bg-blue-400 dark:text-gray-900" : ""
+                          }`}
+                          onClick={() => handlePageChange(page)}
+                          disabled={currentPage === page}
+                        >
+                          {page}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="p-2.5 inline-flex items-center gap-x-2 text-sm rounded-full text-gray-800 bg-gray-200 dark:text-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:pointer-events-none dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
+                        onClick={() => handlePageChange(currentPage + 1 <= numPages ? currentPage + 1 : numPages)}
+                        disabled={currentPage === numPages}
+                      >
+                        <span className="sr-only">Next</span>
+                        <span aria-hidden="true">»</span>
+                      </button>
+                    </div>
+                    {/* Right: Go to page and dropdown */}
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="text"
+                        value={goToPage}
+                        onChange={handleGoToPageChange}
+                        onKeyDown={handleGoToPageKeyDown}
+                        placeholder="Go to page"
+                        className="w-20 p-2 border rounded text-sm text-gray-800 focus:ring-1 focus:ring-gray-600"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleGoToPage}
+                        className="px-3 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                      >
+                        Go
+                      </button>
+                      <select
+                        value={itemsPerPage}
+                        onChange={handleItemsPerPageChange}
+                        className="p-2.5 border rounded text-sm text-gray-800 focus:ring-1 focus:ring-gray-600"
+                      >
+                        {[10, 20, 30, 40, 50].map((perPageOption) => (
+                          <option key={perPageOption} value={perPageOption}>
+                            {perPageOption} per page
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </nav>
                 </div>
               </div>

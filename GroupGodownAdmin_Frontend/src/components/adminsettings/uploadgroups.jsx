@@ -42,7 +42,7 @@ const BulkAddGroups = () => {
 
     try {
       // Step 1: Get delay from backend
-      const delayResponse = await axios.get(`${baseUri}api/Groups/getRowProcessingDelay`);
+      const delayResponse = await axios.get(`${baseUri}groups/getRowProcessingDelay`);
       const delayFromServer = delayResponse.data?.delayMilliseconds || 1000;
       setDelayMs(delayFromServer);
 
@@ -66,7 +66,7 @@ const BulkAddGroups = () => {
 
       // Step 4: Upload to backend
       const response = await axios.post(
-        `${baseUri}api/Groups/bulkAddGroups`,
+        `${baseUri}groups/bulkAddGroups`,
         formData,
         { responseType: 'blob' }
       );

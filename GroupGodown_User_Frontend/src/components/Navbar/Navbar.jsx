@@ -80,6 +80,15 @@ function Navbar() {
                   Privacy
                 </NavLink>
               </li>
+              <li className="nav-item">
+                <NavLink
+                  className="nav-link"
+                  to="/disclaimer"
+                  activeClassName="active"
+                >
+                  Disclaimer
+                </NavLink>
+              </li>
 
               <li className="nav-item">
                 <NavLink

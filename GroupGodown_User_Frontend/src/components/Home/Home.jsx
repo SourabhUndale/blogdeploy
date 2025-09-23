@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./Home.css";
-import { useLocation } from "react-router-dom"; // Now added
+import { useLocation, useParams } from "react-router-dom"; // Now added
 import { Link, json } from "react-router-dom";
 import useDataFetch from "../../useDataFetch";
 import { useNavigate } from "react-router-dom";
@@ -18,6 +18,8 @@ export default function Home() {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const searchQuery = searchParams.get('search') || '';
+  const { categoryName, countryName, languageName } = useParams();
+  const encodedFilters = searchParams.get('filters');
 
   const obaseUri = JSON.parse(JSON.stringify(link));
   const baseUri = obaseUri.DefaultbaseUri;
@@ -26,12 +28,6 @@ export default function Home() {
   const countryData = JSON.parse(JSON.stringify(countriesData));
   const defualtgroupImg = obaseUri.defaultgroupImg;
 
-  // const { data: apiResponse, loading: countriesLoading } = useDataFetch(
-  //   countryUri,
-  //   []
-  // );
-
-  // const countries = apiResponse?.result || [];
 
   const { data: categories, loading: categoriesLoading } = useDataFetch(
     `${baseUri}api/Category`,
@@ -82,14 +78,11 @@ export default function Home() {
     ? pinnedGroup.filter((group) => group.Pin === true)
     : [];
 
-  //let { data: groups } = useDataFetch(`${baseUri}api/Groups/id/Groups`, []);
-
-  //groups = groups.slice().reverse();
 
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedCountry, setSelectedCountry] = useState("");
   const [selectedLanguage, setSelectedLanguage] = useState("");
-  const [selectedApplicationType, setSelectedApplicationType] = useState("");
+  const [selectedApplicationType, setSelectedApplicationType] = useState(searchParams.get('appid') || "");
 
   const [groups, setGroups] = useState([]);
   // const [search, setSearch] = useState("");
@@ -100,6 +93,7 @@ export default function Home() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
+  const [jumpToPage, setJumpToPage] = useState("");
 
   const handleGroupClick = (groupId, catId) => {
     //alert('Join Clicked');
@@ -112,10 +106,10 @@ export default function Home() {
 
   useEffect(() => {
     fetchDataFromAPI();
-    if (searchQuery !== null) {
+    if (searchQuery !== null || categoryName || countryName || languageName || location.search) {
       fetchDataFromAPI();
     }
-  }, [searchQuery]);
+  }, [searchQuery, categoryName, countryName, languageName, location.search]);
 
   useEffect(() => {
     if (window.adsbygoogle && process.env.NODE_ENV !== 'development') {
@@ -149,6 +143,25 @@ export default function Home() {
     };
   
     try {
+      const currentSearchParams = new URLSearchParams(location.search);
+      let paramCatId = currentSearchParams.get('catId');
+      let paramCountry = currentSearchParams.get('country');
+      let paramLang = currentSearchParams.get('lang');
+      let paramAppId = currentSearchParams.get('appid');
+      
+      if (encodedFilters) {
+        try {
+          const decoded = atob(encodedFilters);
+          const filterObject = JSON.parse(decoded);
+          paramCatId = filterObject.catId || paramCatId;
+          paramCountry = filterObject.country || paramCountry;
+          paramLang = filterObject.lang || paramLang;
+          paramAppId = filterObject.appid || paramAppId;
+        } catch (e) {
+          console.error("Error decoding or parsing filters:", e);
+        }
+      }
+
       if (searchQuery) {
         // Prepend the cors-anywhere proxy URL
         const apiUrl = `https://search.api.techkmr.com/search/${encodeURIComponent(searchQuery)}`;
@@ -165,10 +178,51 @@ export default function Home() {
         }
   
         const data = await response.json();
-        setGroups(transformData(data.reverse()));
+        setGroups(transformData(data.sort((a, b) => parseInt(b.groupId) - parseInt(a.groupId)))); // Sort newest to oldest by groupId
+        
         setError(null);
+        setCurrentPage(1); // Reset to first page after search
+      } else if (categoryName || countryName || languageName || paramCatId || paramCountry || paramLang || paramAppId) {
+        // Determine the base URL
+        let apiUrl;
+        const queryParts = [];
+
+        if (categoryName || countryName || languageName) {
+          apiUrl = `${baseUri}groups`;
+          if (categoryName) { apiUrl += `/category/${categoryName}`; }
+          else if (countryName) { apiUrl += `/country/${countryName}`; }
+          else if (languageName) { apiUrl += `/language/${languageName}`; }
+        } else {
+          apiUrl = `${baseUri}groups/find`;
+        }
+
+        if (paramCatId) { queryParts.push(`catId=${paramCatId}`); }
+        if (paramCountry) { queryParts.push(`country=${paramCountry}`); }
+        if (paramLang) { queryParts.push(`lang=${paramLang}`); }
+        if (paramAppId) { queryParts.push(`appid=${paramAppId}`); }
+
+        if (queryParts.length > 0) {
+          apiUrl += `?${queryParts.join('&')}`;
+        }
+   
+        const response = await fetch(apiUrl, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const data = await response.json();
+        setGroups(data.sort((a, b) => parseInt(b.groupId) - parseInt(a.groupId))); // Sort newest to oldest by groupId
+        
+        setError(null);
+        setCurrentPage(1);
+
       } else {
-        const apiUrl = `${baseUri}api/Groups/id/Groups`;
+        const apiUrl = `${baseUri}groups/find`;
       
         const response = await fetch(apiUrl, {
           method: 'GET',
@@ -182,8 +236,10 @@ export default function Home() {
         }
   
         const data = await response.json();
-        setGroups(data.reverse());
+        setGroups(data.sort((a, b) => parseInt(b.groupId) - parseInt(a.groupId))); // Sort newest to oldest by groupId
+        
         setError(null);
+        setCurrentPage(1); // Reset to first page after fetching all groups
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -195,31 +251,88 @@ export default function Home() {
   
   const findgroupClick = async () => {
     setLoading(true);
+    // navigate("/groups/find"); // Removed this navigation
     try {
-      const apiUrl = `${baseUri}api/Groups/id/Groups?catId=${selectedCategory}&country=${selectedCountry}&lang=${selectedLanguage}&appid=${selectedApplicationType}`;
-      const response = await fetch(apiUrl);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
+      let categoryIdForApi = selectedCategory; // Assume selectedCategory is catId by default
+      
+      if (selectedCategory && selectedCategory !== "") {
+        const selectedCategoryObject = categories.find(cat => {
+          
+          return cat.catId === parseInt(selectedCategory); // Explicitly convert to integer
+        });
+        
+        if (selectedCategoryObject) {
+          
+          categoryIdForApi = selectedCategoryObject.catId;
+        } else {
+          console.warn(`Category with id ${selectedCategory} not found.`);
+        }
       }
+      const filterObject = {
+        catId: categoryIdForApi,
+        country: selectedCountry,
+        lang: selectedLanguage,
+        appid: selectedApplicationType,
+      };
+      const encoded = btoa(JSON.stringify(filterObject));
 
-      const data = await response.json();
-      setGroups(data.reverse());
+      navigate(`/groups/find?filters=${encoded}`);
+      // No need to fetch directly here, useEffect will handle it
       setError(null);
+      setCurrentPage(1); // Reset to first page after finding groups
     } catch (error) {
       setError(error);
-      console.error("Error fetching API data:", error);
+      console.error("Error performing find group operation:", error); // Updated log message
     } finally {
       setLoading(false);
     }
   };
 
-  
+
+  const handleGoToPage = () => {
+    const page = parseInt(jumpToPage);
+    const totalPages = Math.ceil(groups.length / itemsPerPage);
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+      setJumpToPage(""); // Clear the input after jumping
+    } else {
+      alert("Hmm... looks like that page isn't available.");
+    }
+  };
 
   const linkClick = async (Cat, Con, Lan, Apptype) => {
     setLoading(true);
     try {
-      const apiUrl = `${baseUri}api/Groups/id/Groups?catId=${Cat}&country=${Con}&lang=${Lan}&appid=${Apptype}`;
+      // Construct API URL and navigation path
+      let apiUrl = `${baseUri}groups`;
+      let navigatePath = "/groups";
+      const queryParams = [];
+
+      if (Cat && Cat !== "") {
+        // Assuming Cat is already the category name, not ID
+        apiUrl += `/category/${Cat}`;
+        navigatePath += `/category/${Cat}`;
+      }
+      if (Con && Con !== "") {
+        apiUrl += `/country/${Con}`;
+        navigatePath += `/country/${Con}`;
+      }
+      if (Lan && Lan !== "") {
+        apiUrl += `/language/${Lan}`;
+        navigatePath += `/language/${Lan}`;
+      }
+      if (Apptype && Apptype !== "") {
+        queryParams.push(`appid=${Apptype}`);
+      }
+
+      if (queryParams.length > 0) {
+        apiUrl += `?${queryParams.join('&')}`;
+        navigatePath += `?${queryParams.join('&')}`;
+      }
+
+      // Navigate first, then fetch data
+      navigate(navigatePath);
+      
       const response = await fetch(apiUrl);
 
       if (!response.ok) {
@@ -229,6 +342,7 @@ export default function Home() {
       const data = await response.json();
       setGroups(data);
       setError(null);
+      setCurrentPage(1); // Reset to first page after link click
     } catch (error) {
       setError(error);
       console.error("Error fetching API data:", error);
@@ -284,49 +398,22 @@ export default function Home() {
               onChange={(e) => {
                 const selectedcat = e.target.value;
                 const newCat =
-                  selectedcat === "Any Category" ? "" : selectedcat;
+                  selectedcat === "Category" ? "" : selectedcat;
                 setSelectedCategory(newCat);
               }}
             >
-              <option>Any Category</option>
-              {/* {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))} */}
-
+              <option>Category</option>
+              
               {categories
-                .sort((a, b) => a.name.localeCompare(b.name)) // Sort categories alphabetically
+                .sort((a, b) => (a.name || '').localeCompare(b.name || '')) // Sort categories alphabetically
                 .map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
+                  <option key={category.catId} value={category.catId}>
+                    {category.catName}
                   </option>
                 ))}
             </select>
           </div>
-
-          {/* <div>
-            <label>Any Country</label>
-            <select
-              name="Country"
-              className="form-select"
-              value={selectedCountry}
-              onChange={(e) => {
-                const selectedCon = e.target.value;
-                const newCon = selectedCon === "Any Country" ? "" : selectedCon;
-                setSelectedCountry(newCon);
-              }}
-            >
-              <option>Any Country</option>
-              {Object.entries(countryData).map(([code, name]) => (
-                <option key={code} value={name}>
-                  {name}
-                </option>
-              ))}
-
-            </select>
-          </div> */}
-
+        
           <div>
             <label>Any Country</label>
             <select
@@ -335,11 +422,11 @@ export default function Home() {
               value={selectedCountry}
               onChange={(e) => {
                 const selectedCon = e.target.value;
-                const newCon = selectedCon === "Any Country" ? "" : selectedCon;
+                const newCon = selectedCon === "Country" ? "" : selectedCon;
                 setSelectedCountry(newCon);
               }}
             >
-              <option>Any Country</option>
+              <option>Country</option>
               {countryData.map(({ abbreviation, country }) => (
                 <option key={abbreviation} value={country}>
                   {country}
@@ -357,11 +444,11 @@ export default function Home() {
               onChange={(e) => {
                 const selectedLang = e.target.value;
                 const newLang =
-                  selectedLang === "Any Language" ? "" : selectedLang;
+                  selectedLang === "Language" ? "" : selectedLang;
                 setSelectedLanguage(newLang);
               }}
             >
-              <option>Any Language</option>
+              <option>Language</option>
               {Object.entries(langData).map(([code, name]) => (
                 <option key={code} value={name}>
                   {name}
@@ -451,15 +538,15 @@ export default function Home() {
                     <div className="heading-div">
                       <h5>
                         <Link
-                          
+                          to={`/groupinvite?id=${pinData.groupId}&catId=${pinData.Category.catId}`}
                           className="text-decoration-none text-black fs-5 fw-bold mb-0 underline"
                           
                           onClick={() => {
-                            event.preventDefault();
+                            //event.preventDefault(); // Removed to allow default Link behavior
                             handleGroupClick(
                               pinData.groupId,
                               pinData.Category.catId
-                            );
+                            ); // Keep for any other side effects if needed
                           }}
                         >
                           {pinData.groupName}
@@ -467,30 +554,30 @@ export default function Home() {
                       </h5>
                       <div>
                         <a
-                          href="#"
+                          href={`/groups/category/${pinData.Category.catName}`}
                           className="text-decoration-none text-secondary underline"
-                          onClick={() => {
-                            event.preventDefault();
-                            linkClick(pinData.Category.catId, "", "", "");
+                          onClick={(e) => {
+                            e.preventDefault();
+                            linkClick(pinData.Category.catName, "", "", "");
                           }}
                         >
                           <i class="bi bi-list"></i> {pinData.Category.catName}
                         </a>
                         <a
-                          href="#"
+                          href={`/groups/country/${pinData.country}`}
                           className="text-decoration-none text-secondary underline"
-                          onClick={() => {
-                            event.preventDefault();
+                          onClick={(e) => {
+                            e.preventDefault();
                             linkClick("", pinData.country, "", "");
                           }}
                         >
                           <i class="bi bi-globe"></i> {pinData.country}
                         </a>
                         <a
-                          href="#"
+                          href={`/groups/language/${pinData.Language}`}
                           className="text-decoration-none text-secondary underline"
-                          onClick={() => {
-                            event.preventDefault();
+                          onClick={(e) => {
+                            e.preventDefault();
                             linkClick("", "", pinData.Language, "");
                           }}
                         >
@@ -501,17 +588,17 @@ export default function Home() {
                   </div>
                   <div>
                     <p className="text-right ps-4 pe-4">
-                      <a
-                        href="#"
+                      <Link
+                        to={`/groupinvite?id=${pinData.groupId}&catId=${pinData.Category.catId}`}
                         className="text-black text-decoration-none underline"
                         onClick={() => {
-                          event.preventDefault();
-                          handleGroupClick(group.groupId, group.catId);
+                          //event.preventDefault(); // Removed to allow default Link behavior
+                          handleGroupClick(pinData.groupId, pinData.Category.catId);
                         }}
                       >
                         {" "}
                         {pinData.groupDesc}
-                      </a>
+                      </Link>
                     </p>
                     <ul className="list-group list-group-horizontal ">
                       {/* Add your list items here */}
@@ -538,7 +625,7 @@ export default function Home() {
                       Share on :{" "}
                       <div className="social-icons-div ">
                         <a
-                          href=""
+                          href={`https://wa.me/?text=${encodeURIComponent(`Join our WhatsApp group: ${window.location.href}groupinvite?id=${pinData.groupId}&catId=${pinData.Category.catId}`)}`}
                           onClick={() => {
                             shareOnWhatsApp(
                               pinData.groupId,
@@ -550,7 +637,7 @@ export default function Home() {
                           <i className="bi bi-whatsapp text-success"></i>
                         </a>
                         <a
-                          href="#"
+                          href={`https://www.instagram.com/direct/new/?text=${encodeURIComponent(`Join our WhatsApp group: ${window.location.href}groupinvite?id=${pinData.groupId}&catId=${pinData.Category.catId}`)}`}
                           onClick={() => {
                             shareOnInstagram(
                               pinData.groupId,
@@ -565,7 +652,7 @@ export default function Home() {
                           ></i>
                         </a>
                         <a
-                          href=""
+                          href={`https://t.me/share/url?url=${encodeURIComponent(`${window.location.href}groupinvite?id=${pinData.groupId}&catId=${pinData.Category.catId}`)}`}
                           onClick={() => {
                             shareOnTelegram(
                               pinData.groupId,
@@ -611,11 +698,11 @@ export default function Home() {
                   <div className="heading-div">
                     <h5>
                       <a
-                        href=""
+                        href={`/groupinvite?id=${group.groupId}&catId=${group.category.catId}`}
                         className="text-black text-decoration-none fw-bold underline"
-                        onClick={() => {
-                          event.preventDefault();
-                          handleGroupClick(group.groupId, group.catId);
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleGroupClick(group.groupId, group.category.catId);
                         }}
                       >
                         {group.groupName}
@@ -623,30 +710,30 @@ export default function Home() {
                     </h5>
                     <div>
                       <a
-                        href=""
+                        href={`/groups/category/${group.category.catName}`}
                         className="text-decoration-none text-secondary underline"
-                        onClick={() => {
-                          event.preventDefault();
-                          linkClick(group.catId, "", "", "");
+                        onClick={(e) => {
+                          e.preventDefault();
+                          linkClick(group.category.catName, "", "", "");
                         }}
                       >
-                        <i class="bi bi-list"></i> {group.catName}
+                        <i class="bi bi-list"></i> {group.category.catName}
                       </a>
                       <a
-                        href=""
+                        href={`/groups/country/${group.country}`}
                         className="text-decoration-none text-secondary underline"
-                        onClick={() => {
-                          event.preventDefault();
+                        onClick={(e) => {
+                          e.preventDefault();
                           linkClick("", group.country, "", "");
                         }}
                       >
                         <i class="bi bi-globe"></i> {group.country}
                       </a>
                       <a
-                        href=""
+                        href={`/groups/language/${group.language}`}
                         className="text-decoration-none text-secondary underline"
-                        onClick={() => {
-                          event.preventDefault();
+                        onClick={(e) => {
+                          e.preventDefault();
                           linkClick("", "", group.language, "");
                         }}
                       >
@@ -658,21 +745,22 @@ export default function Home() {
                 <div>
                   <p className="text-right ps-4 pe-4">
                     <a
-                      href=""
+                      href={`/groupinvite?id=${group.groupId}&catId=${group.category.catId}`}
                       className="text-decoration-none text-black underline"
-                      onClick={() => {
-                        event.preventDefault();
-                        handleGroupClick(group.groupId, group.catId);
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleGroupClick(group.groupId, group.category.catId);
                       }}
                     >
                       {truncateDescription(group.groupDesc)}
                     </a>
                     {group.groupDesc.length > 25 && (
                       <Link
+                        to={`/groupinvite?id=${group.groupId}&catId=${group.category.catId}`}
                         className="text-decoration-none underline"
                         onClick={() => {
-                          event.preventDefault();
-                          handleGroupClick(group.groupId, group.catId);
+                          //event.preventDefault(); // Removed to allow default Link behavior
+                          handleGroupClick(group.groupId, group.category.catId);
                         }}
                       >
                         Read more
@@ -705,11 +793,11 @@ export default function Home() {
                   {/* <a href="/groupinvite">Join Group </a> */}
 
                   <a
-                    href=""
+                    href={`/joingroup/${group.groupLink.substring(group.groupLink.lastIndexOf("/") + 1)}?groupName=${encodeURIComponent(group.groupName)}`}
                     className="text-decoration-none text-black fw-bold fs-5 underline"
-                    onClick={() => {
-                      event.preventDefault();
-                      handleGroupClick(group.groupId, group.catId);
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleGroupClick(group.groupId, group.category.catId);
                     }}
                   >
                     Join Group
@@ -719,7 +807,7 @@ export default function Home() {
                     Share on :{" "}
                     <div className="social-icons-div ">
                       <a
-                        href=""
+                        href={`https://wa.me/?text=${encodeURIComponent(`Join our WhatsApp group: ${window.location.href}groupinvite?id=${group.groupId}&catId=${group.catId}`)}`}
                         onClick={() => {
                           shareOnWhatsApp(group.groupId, group.catId);
                         }}
@@ -727,7 +815,7 @@ export default function Home() {
                         <i className="bi bi-whatsapp text-success"></i>
                       </a>
                       <a
-                        href=""
+                        href={`https://www.instagram.com/direct/new/?text=${encodeURIComponent(`Join our WhatsApp group: ${window.location.href}groupinvite?id=${group.groupId}&catId=${group.catId}`)}`}
                         onClick={() => {
                           shareOnInstagram(group.groupId, group.catId);
                         }}
@@ -738,7 +826,7 @@ export default function Home() {
                         ></i>
                       </a>
                       <a
-                        href=""
+                        href={`https://t.me/share/url?url=${encodeURIComponent(`${window.location.href}groupinvite?id=${group.groupId}&catId=${group.catId}`)}`}
                         onClick={() => {
                           shareOnTelegram(group.groupId, group.catId);
                         }}
@@ -765,121 +853,87 @@ export default function Home() {
           ))}
         {/* </div> */}
 
-        <nav aria-label="...0">
-          <ul className="pagination">
-            <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
-              <button
-                className="page-link"
-                onClick={() => handlePageChange(currentPage - 1)}
-              >
-                Previous
-              </button>
-            </li>
-            {Array.from({
-              length: Math.min(Math.ceil(groups.length / itemsPerPage), 4), // Display maximum of 4 page numbers
-            }).map((_, index) => {
-              let pageNumber;
-              if (currentPage <= 2) {
-                pageNumber = index + 1; // Display the first four page numbers
-              } else if (
-                currentPage >=
-                Math.ceil(groups.length / itemsPerPage) - 1
-              ) {
-                pageNumber =
-                  Math.ceil(groups.length / itemsPerPage) - 3 + index; // Display the last four page numbers
-              } else {
-                pageNumber = currentPage - 1 + index; // Display page numbers around the current page
-              }
-              return (
+        <div className="card card_w mt-4 bg-transparent pagination-card">
+          <div className="card-body d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <nav aria-label="...0">
+              <ul className="pagination mb-0">
+                <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
+                  <button
+                    className="page-link"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                  >
+                    Previous
+                  </button>
+                </li>
+                {Array.from({
+                  length: Math.min(Math.ceil(groups.length / itemsPerPage), 4), // Display maximum of 4 page numbers
+                }).map((_, index) => {
+                  let pageNumber;
+                  const totalPages = Math.ceil(groups.length / itemsPerPage);
+                  if (currentPage <= 2) {
+                    pageNumber = index + 1; // Display the first four page numbers
+                  } else if (
+                    currentPage >= totalPages - 1 && totalPages > 3
+                  ) {
+                    pageNumber = 
+                      totalPages - 3 + index; // Display the last four page numbers
+                  } else {
+                    pageNumber = currentPage - 1 + index; // Display page numbers around the current page
+                  }
+                  pageNumber = Math.max(1, pageNumber); // Ensure pageNumber is at least 1
+                  return (
+                    <li
+                      key={index}
+                      className={`page-item ${
+                        pageNumber === currentPage ? "active" : ""
+                      }`}
+                    >
+                      <button
+                        className="page-link"
+                        onClick={() => handlePageChange(pageNumber)}
+                      >
+                        {pageNumber}
+                      </button>
+                    </li>
+                  );
+                })}
                 <li
-                  key={index}
                   className={`page-item ${
-                    pageNumber === currentPage ? "active" : ""
+                    currentPage === Math.ceil(groups.length / itemsPerPage) ||
+                    groups.length === 0
+                      ? "disabled"
+                      : ""
                   }`}
                 >
                   <button
                     className="page-link"
-                    onClick={() => handlePageChange(pageNumber)}
+                    onClick={() => handlePageChange(currentPage + 1)}
                   >
-                    {pageNumber}
+                    Next
                   </button>
                 </li>
-              );
-            })}
-            <li
-              className={`page-item ${
-                currentPage === Math.ceil(groups.length / itemsPerPage) ||
-                groups.length === 0
-                  ? "disabled"
-                  : ""
-              }`}
-            >
-              <button
-                className="page-link"
-                onClick={() => handlePageChange(currentPage + 1)}
-              >
-                Next
-              </button>
-            </li>
-          </ul>
-        </nav>
-        {/* // Final */}
-
-        {/* // Newest Page navbar */}
-      </div>
-      {/* <div className="home-main-div">
-      <div className="card_w">
-        <div className="card-body">
-          <div className="homepage-container">
-            <header>
-              <h1>Join the Best WhatsApp Groups in India, USA, and Worldwide | GroupGodown.com</h1>
-            </header>
-            <section className="intro-section">
-              <p>
-                Group Godown is the perfect place to find out active WhatsApp groups from around the world.
-                Whether you're interested in general WhatsApp groups, Girls WhatsApp groups, or Indian groups, we've got you covered.
-                Explore and join groups that match your interests, such as Share market WhatsApp group discussions, earning opportunities, 
-                YouTube subscribe WhatsApp group, and more.
-              </p>
-            </section>
-            <section className="why-choose-us">
-              <h2>Why Choose Us?</h2>
-              <ul>
-                <li>
-                  <strong>Active Groups Only:</strong> We ensure that every group link listed is currently active. Deleted groups or revoked links are quickly removed.
-                  <br />
-                  (हम सुनिश्चित करते हैं कि सूचीबद्ध प्रत्येक समूह लिंक वर्तमान में सक्रिय है। हटाए गए समूह या निरस्त लिंक को तुरंत हटा दिया जाता है।)
-                </li>
-                <li>
-                  <strong>Easy Reporting:</strong> If you find any issues with the groups, such as deleted or revoked links, please report them to us.
-                  We will act quickly to resolve any problems and update the listings.
-                  <br />
-                  (यदि आपको समूहों में कोई समस्या मिलती है, जैसे कि हटाए गए या निरस्त किए गए लिंक, तो कृपया हमें इसकी रिपोर्ट करें। 
-                  हम किसी भी समस्या को हल करने और लिस्टिंग को अपडेट करने के लिए तुरंत कार्रवाई करेंगे।)
-                </li>
               </ul>
-            </section>
-            <section className="how-it-works">
-              <h2>How It Works?</h2>
-              <ol>
-                <li>
-                  <strong>Search & Discover:</strong> Use our search function to find groups based on your interests or needs. Whether you're looking for market discussions, 
-                  social groups, or specialized communities, we make it easy to discover what you're looking for.
-                </li>
-                <li>
-                  <strong>Join & Engage:</strong> Once you find a group that suits your needs, simply click the link to join. Start engaging with like-minded individuals 
-                  and make the most of your WhatsApp experience.
-                </li>
-                <li>
-                  <strong>Stay Updated:</strong> Our team constantly monitors and updates the group listings to ensure you have access to the most active and relevant groups. 
-                  Check back regularly for new opportunities and groups.
-                </li>
-              </ol>
-            </section>
+            </nav>
+            {/* // Final */}
+
+            {/* Newest Page navbar */}
+            <div className="d-flex align-items-center">
+              <input
+                type="number"
+                className="form-control w-80 me-2 align-middle"
+                placeholder="Jump to page"
+                value={jumpToPage}
+                onChange={(e) => setJumpToPage(e.target.value)}
+              />
+              <button className="btn btn-primary" onClick={handleGoToPage}>
+                Go
+              </button>
+            </div>
           </div>
         </div>
+
       </div>
-    </div> */}
+     
 
 <div className="home-main-div">
   <div className="card_w">
@@ -935,17 +989,17 @@ export default function Home() {
         <section className="enhance-promotion">
           <h2>Enhance Your WhatsApp Groups Free Promotion and Easy Link Sharing</h2>
           <p>
-            Our platform allows you to <a href="https://www.groupgodown.com/addgroup" >Add WhatsApp Group Links</a>, 
-            <a href="/addgroup">Submit WhatsApp Group</a> Invites, and easily <a href="https://www.groupgodown.com/addgroup">Promote WhatsApp Group</a> Activities. 
+            Our platform allows you to <a href="/addgroup" >Add WhatsApp Group Links</a>, 
+            <a href="/addgroup">Submit WhatsApp Group</a> Invites, and easily <a href="/addgroup">Promote WhatsApp Group</a> Activities. 
             Use our Free WhatsApp Group Promo tools to increase your WhatsApp Group link visibility. 
-            Create WhatsApp Group Links, <span style={{ color: 'red' }}>Join WhatsApp Groups, and <a href="https://www.groupgodown.com/addgroup">Increase Group Members</a>.</span> 
+            Create WhatsApp Group Links, <span style={{ color: 'red' }}>Join WhatsApp Groups, and <a href="/addgroup">Increase Group Members</a>.</span> 
           </p>
         </section>
       </div>
     </div>
   </div>
 </div>
-
+   
     </>
   );
 }

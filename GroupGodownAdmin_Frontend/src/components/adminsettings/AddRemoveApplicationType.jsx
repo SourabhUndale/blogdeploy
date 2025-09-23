@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
+import api from "../../utils/api"; // Use the custom Axios instance
 import baselinks from "../../../baselinks.json";
+import { isValidToken, redirectToLogin } from '../../utils/auth';
 
 const oBaseUri = JSON.parse(JSON.stringify(baselinks));
 
@@ -13,23 +14,20 @@ async function fetchData() {
   
 
   try {
-    let headersList = {
-      Accept: "*/*",
-    };
-  
-    let response = await fetch(`${baseUri}api/application`, {
-      method: "GET",
-      headers: headersList,
+    // No need for headersList here, Axios can handle common headers
+    const response = await api.get(`${baseUri}api/application`, {
+      headers: {
+        Authorization: `Bearer ${sessionStorage.getItem('bearerToken')}`,
+      },
     });
-  
-    const res = await response.json();
-    return res;
+    
+    // Axios automatically parses JSON, so no need for response.json()
+    return response.data;
   } catch (error) {
-    if(error.response.status === 401)
-    {
-      window.location = '/';
-    }
-    console.error("Error:", error);
+    // The Axios interceptor will handle 401 errors globally
+    
+    // You can also handle other errors by showing an error message to the user
+    return [];
   }
 }
 
@@ -37,14 +35,15 @@ async function fetchData() {
 function AddRemoveApplicationType() {
 
   const [data, setData] = useState([]);
-  const [jwtToken, setJwtToken] = useState();
   const [searchQuery, setSearchQuery] = useState("");
+  const [goToPage, setGoToPage] = useState("");
+  const [itemsPerPage, setItemsPerPage] = useState(perPageitem);
 
   useEffect(() => {
     const token = sessionStorage.getItem('bearerToken');
     if(token)
     {
-      setJwtToken(token);
+      // setJwtToken(token); // Remove this line
     }
   },[]);
 
@@ -57,9 +56,13 @@ function AddRemoveApplicationType() {
   }, []);
 
   const addApplication = async () => {
+    if (!isValidToken()) {
+      redirectToLogin();
+      return;
+    }
     const applicationNameInput = document.getElementById("appName");
     let applicationName = applicationNameInput.value.trim();
-    // console.log(categoryName);
+    // //console.log(categoryName);
   
 
     if(!applicationName || /^\s*$/.test(applicationName))
@@ -69,49 +72,94 @@ function AddRemoveApplicationType() {
     }
 
     try {
-      const response = await axios.post(
+      const response = await api.post(
         `${baseUri}api/application`,
         { name: applicationName },
         {
           headers: {
-            Authorization: `Bearer ${jwtToken}`,
+            Authorization: `Bearer ${sessionStorage.getItem('bearerToken')}`,
           },
         }
       );
       setData([...data,response.data]);
       applicationNameInput.value = '';
       alert("New Application Type Added");
-      console.log(response);
+      
       // return response;
     } catch (error) {
       if(error.response.status === 401)
       {
         window.location = '/';
       }
-      console.error("Error:", error);
+      
     }
   };
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = perPageitem;
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
   };
-  // console.log(data);
+  // //console.log(data);
 
   // Search for category
   const handleSearchChange = (event) => {
     setSearchQuery(event.target.value);
     setCurrentPage(1);
-  }
+  };
 
-  const filteredData = data.filter((item) =>
-  item.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredData = useMemo(() => {
+    return data.filter((item) =>
+      item.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [data, searchQuery]);
 
-  const numPages = Math.ceil(filteredData.length / itemsPerPage) < 1 ? 1 : Math.ceil(filteredData.length / itemsPerPage);
+  const numPages = useMemo(() => {
+    return Math.ceil(filteredData.length / itemsPerPage) < 1
+      ? 1
+      : Math.ceil(filteredData.length / itemsPerPage);
+  }, [filteredData, itemsPerPage]);
+
+  // Helper to generate pagination array
+  const getPagination = useCallback(() => {
+    const pages = [];
+    if (numPages <= 3) {
+      for (let i = 1; i <= numPages; i++) pages.push(i);
+    } else {
+      if (currentPage === 1) {
+        pages.push(1, 2, 3);
+      } else if (currentPage === numPages) {
+        pages.push(numPages - 2, numPages - 1, numPages);
+      } else {
+        pages.push(currentPage - 1, currentPage, currentPage + 1);
+      }
+    }
+    return pages;
+  }, [numPages, currentPage]);
+
+  const handleItemsPerPageChange = useCallback((event) => {
+    setItemsPerPage(parseInt(event.target.value));
+    setCurrentPage(1); // Reset current page when changing items per page
+  }, []);
+
+  const handleGoToPageChange = (e) => {
+    setGoToPage(e.target.value.replace(/[^0-9]/g, ""));
+  };
+
+  const handleGoToPage = () => {
+    const page = parseInt(goToPage, 10);
+    if (!isNaN(page) && page >= 1 && page <= numPages) {
+      setCurrentPage(page);
+    }
+    setGoToPage("");
+  };
+
+  const handleGoToPageKeyDown = (e) => {
+    if (e.key === "Enter") {
+      handleGoToPage();
+    }
+  };
 
   return (
     <>
@@ -125,13 +173,13 @@ function AddRemoveApplicationType() {
               type="number"
               name="appNum"
               id="appNum"
-              className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-white dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
+              className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 text-black-500 dark:text-black-400 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
               required
               value={data.length + 1}
             />
             <label
               for="appNum"
-              className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
+              className="peer-focus:font-medium absolute text-sm text-black-500 dark:text-black-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
             >
               Application ID
             </label>
@@ -141,12 +189,12 @@ function AddRemoveApplicationType() {
               type="text"
               name="appName"
               id="appName"
-              className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-white dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
+              className="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 text-black-500 dark:text-black-400 appearance-none dark:text-black dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
               required
             />
             <label
               for="appName"
-              className="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
+              className="peer-focus:font-medium absolute text-sm text-black-500 dark:text-black-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
             >
               Application Type
             </label>
@@ -157,12 +205,7 @@ function AddRemoveApplicationType() {
           onClick={addApplication}>
             Add
           </button>
-          {/* <button className="text-white bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 shadow-lg shadow-blue-500/50 dark:shadow-lg dark:shadow-blue-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2">
-            Search
-          </button> */}
-          {/* <button className="text-white bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-red-300 dark:focus:ring-red-800 shadow-lg shadow-red-500/50 dark:shadow-lg dark:shadow-red-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2">
-            Update
-          </button> */}
+        
         </div>
 
         <div className="flex flex-col mt-7">
@@ -204,30 +247,15 @@ function AddRemoveApplicationType() {
                   <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-center">
                     <thead className="bg-gray-50 dark:bg-gray-700">
                       <tr>
-                        {/* <th scope="col" className="py-3 px-4 pe-0">
-                          <div className="flex items-center h-5">
-                            <input
-                              id="hs-table-pagination-checkbox-all"
-                              type="checkbox"
-                              className="border-gray-200 rounded text-blue-600 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:checked:bg-blue-500 dark:checked:border-blue-500 dark:focus:ring-offset-gray-800"
-                            />
-                            <label
-                              for="hs-table-pagination-checkbox-all"
-                              className="sr-only"
-                            >
-                              Checkbox
-                            </label>
-                          </div>
-                        </th> */}
                         <th
                           scope="col"
-                           className="px-6 py-3  text-xs font-medium text-gray-500 uppercase"
+                          className="px-6 py-3 text-xs font-medium text-white uppercase"
                         >
                           Application ID
                         </th>
                         <th
                           scope="col"
-                          className="px-6 py-3 text-xs font-medium text-gray-500 uppercase"
+                          className="px-6 py-3 text-xs font-medium text-white uppercase"
                         >
                           Application Type
                         </th>
@@ -244,25 +272,10 @@ function AddRemoveApplicationType() {
                             (currentPage - 1) * itemsPerPage + index + 1;
                           return (
                         <tr key={index}>
-                        {/* <td className="py-3 ps-4">
-                          <div className="flex items-center h-5">
-                            <input
-                              id="hs-table-pagination-checkbox-1"
-                              type="checkbox"
-                              className="border-gray-200 rounded text-blue-600 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:checked:bg-blue-500 dark:checked:border-blue-500 dark:focus:ring-offset-gray-800"
-                            />
-                            <label
-                              for="hs-table-pagination-checkbox-1"
-                              className="sr-only"
-                            >
-                              Checkbox
-                            </label>
-                          </div>
-                        </td> */}
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-200">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
                           {serialNumber}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
                           {appType.name}
                         </td>
                       </tr>
@@ -273,45 +286,84 @@ function AddRemoveApplicationType() {
                   </table>
                 </div>
                 <div className="py-1 px-4">
-                  <nav className="flex items-center space-x-1">
-                    <button
-                      type="button"
-                      className="p-2.5 inline-flex items-center gap-x-2 text-sm rounded-full text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none dark:text-white dark:hover:bg-white/10 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
-                      onClick={() => handlePageChange(currentPage - 1 > 0 ? currentPage -1 : 1)}
-                      disabled={currentPage === 1}
-                    >
-                      <span aria-hidden="true">«</span>
-                      <span className="sr-only">Previous</span>
-                    </button>
-                    {Array.from({
-                      length: numPages
-                    }).map((_,index) => (
+                  <nav className="flex flex-wrap items-center justify-between w-full">
+                    {/* Left: Pagination */}
+                    <div className="flex items-center space-x-1">
                       <button
-                      type="button"
-                      className={`min-w-[40px] flex justify-center items-center text-gray-800 hover:bg-gray-100 py-2.5 text-sm rounded-full disabled:opacity-50 disabled:pointer-events-none dark:text-white dark:hover:bg-white/10 ${
-                        currentPage === index + 1 ? "active" : ""
-                      }`}
-                      aria-current={
-                        currentPage === index + 1 ? "page" : undefined
-                      }
-                      onClick={() => handlePageChange(index + 1)}
-                    >
-                      {index + 1}
-                    </button>
-                    ))}
-                    
-
-                    <button
-                      type="button"
-                      className="p-2.5 inline-flex items-center gap-x-2 text-sm rounded-full text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none dark:text-white dark:hover:bg-white/10 dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
-                      onClick={() => handlePageChange(currentPage + 1 <= numPages ? currentPage + 1: numPages)}
-                      disabled={
-                        currentPage === numPages
-                      }
-                    >
-                      <span className="sr-only">Next</span>
-                      <span aria-hidden="true">»</span>
-                    </button>
+                        type="button"
+                        className="p-2.5 inline-flex items-center gap-x-2 text-sm rounded-full text-gray-800 bg-gray-200 dark:text-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:pointer-events-none dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
+                        onClick={() =>
+                          handlePageChange(
+                            currentPage - 1 > 0 ? currentPage - 1 : 1
+                          )
+                        }
+                        disabled={currentPage === 1}
+                      >
+                        <span aria-hidden="true">«</span>
+                        <span className="sr-only">Previous</span>
+                      </button>
+                      {getPagination().map((page, idx) =>
+                        page === "..." ? (
+                          <span key={"ellipsis-" + idx} className="px-2">...</span>
+                        ) : (
+                          <button
+                            key={page}
+                            type="button"
+                            className={`min-w-[40px] flex justify-center items-center text-gray-800 bg-gray-200 dark:text-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 py-2.5 text-sm rounded-full disabled:opacity-50 disabled:pointer-events-none ${
+                              currentPage === page ? "bg-blue-500 text-white dark:bg-blue-400 dark:text-gray-900" : ""
+                            }`}
+                            onClick={() => handlePageChange(page)}
+                            disabled={currentPage === page}
+                          >
+                            {page}
+                          </button>
+                        )
+                      )}
+                      <button
+                        type="button"
+                        className="p-2.5 inline-flex items-center gap-x-2 text-sm rounded-full text-gray-800 bg-gray-200 dark:text-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:pointer-events-none dark:focus:outline-none dark:focus:ring-1 dark:focus:ring-gray-600"
+                        onClick={() =>
+                          handlePageChange(
+                            currentPage + 1 <= numPages
+                              ? currentPage + 1
+                              : numPages
+                          )
+                        }
+                        disabled={currentPage === numPages}
+                      >
+                        <span className="sr-only">Next</span>
+                        <span aria-hidden="true">»</span>
+                      </button>
+                    </div>
+                    {/* Right: Go to page and dropdown */}
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="text"
+                        value={goToPage}
+                        onChange={handleGoToPageChange}
+                        onKeyDown={handleGoToPageKeyDown}
+                        placeholder="Go to page"
+                        className="w-20 p-2 border rounded text-sm text-gray-800 focus:ring-1 focus:ring-gray-600"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleGoToPage}
+                        className="px-3 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                      >
+                        Go
+                      </button>
+                      <select
+                        value={itemsPerPage}
+                        onChange={handleItemsPerPageChange}
+                        className="p-2.5 border rounded text-sm text-gray-800 focus:ring-1 focus:ring-gray-600"
+                      >
+                        {[10, 20, 30, 40, 50].map((perPageOption) => (
+                          <option key={perPageOption} value={perPageOption}>
+                            {perPageOption} per page
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </nav>
                 </div>
               </div>

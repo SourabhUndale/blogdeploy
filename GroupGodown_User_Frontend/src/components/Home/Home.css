@@ -95,6 +95,20 @@
   }
 } */
 
+.pagination-card {
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.pagination-card .card-body {
+  padding: 0 !important;
+}
+
+.pagination-card .card-body nav,
+.pagination-card .card-body > div {
+  margin: 0 !important;
+  padding: 0 !important;
+}
 
 /* -- for SEOsection */
 
@@ -142,4 +156,30 @@ header h1 {
 
 strong {
   color: #333;
+}
+
+.group-invite__description {
+  background-color: #f9fafb;   /* light gray bg */
+  border: 1px solid #e5e7eb;   /* subtle border */
+  border-radius: 8px;          /* rounded corners */
+  padding: 16px;               /* spacing */
+  margin-bottom: 20px;         /* space below */
+  text-align: center;          /* center align */
+  line-height: 1.6;            /* relaxed spacing */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05); /* soft shadow */
+}
+
+.group-invite__description p {
+  font-size: 1rem;
+  color: #374151; /* dark gray */
+  margin: 0;
+}
+
+.group-invite__description .highlight {
+  font-weight: 600;
+  color: #065f46; /* green tone */
+}
+
+.group-invite__description .highlight.join-btn {
+  color: #059669; /* brighter green for 'Join Group' */
 }
