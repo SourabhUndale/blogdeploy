@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Configuration
-IMAGE_DIR="./GroupGodown_API_Backend/GrouosAPI/wwwroot/images"
+IMAGE_DIR="/root/blogdeploy/GroupGodown_API_Backend/publish/wwwroot/images"
 THUMBNAIL_WIDTH=300
 JPEG_QUALITY=80 # Quality for JPEG output (0-100)
 
