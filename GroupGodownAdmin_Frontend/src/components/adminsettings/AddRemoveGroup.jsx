@@ -338,7 +338,7 @@ function AddRemoveGroup() {
         throw new Error("Token Not Found");
       }
       const response = await api.delete(
-        `https://localhost:7134/groups/harddelete/${groupIdToDelete}`,
+        `${baseUri}groups/harddelete/${groupIdToDelete}`,
         {
           headers: {
             Authorization: `Bearer ${authToken}`,

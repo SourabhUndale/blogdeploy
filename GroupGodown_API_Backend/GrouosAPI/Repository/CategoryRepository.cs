@@ -16,7 +16,7 @@ namespace GrouosAPI.Repository
         }
         public ICollection<CategoryDto> GetAll()
         {
-            var categories = _context.Category.ToList();
+            var categories = _context.Category.OrderBy(c => c.catName).ToList();
            
             var categoriesDto = new List<CategoryDto>();
 

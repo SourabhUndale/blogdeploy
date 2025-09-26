@@ -36,86 +36,42 @@ async function fetchData() {
   }
 }
 
-const DialogBox = ({ open, handleClose, scroll, selectedGroup }) => (
-  <Dialog
-    open={open}
-    onClose={handleClose}
-    scroll={scroll}
-    aria-labelledby="scroll-dialog-title"
-    aria-describedby="scroll-dialog-description"
-  >
-    <DialogTitle id="scroll-dialog-title">Reports</DialogTitle>
-    <DialogContent dividers={scroll === "paper"}>
-      <DialogContentText id="scroll-dialog-description" tabIndex={-1}>
-        {selectedGroup && (
-          <div>
-            <h2>Reports for {selectedGroup?.groupName}</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Reason</th>
-                  <th>Description</th>
-                </tr>
-              </thead>
-              <tbody>
-                {selectedGroup?.Reports.map((report, idx) => (
-                  <tr key={idx}>
-                    <td>{report.ReportReason}</td>
-                    <td>{report.ReportDesc}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </DialogContentText>
-    </DialogContent>
-    <DialogActions>
-      <Button onClick={handleClose}>Ok</Button>
-    </DialogActions>
-  </Dialog>
-);
-
 function ReportedGroups() {
-  const [open, setOpen] = useState(false);
+  const [openDeleteConfirmation, setOpenDeleteConfirmation] = useState(false);
   const [groupIdToDelete, setGroupIdToDelete] = useState(null);
+  const [deleteType, setDeleteType] = useState(null); // 'soft' or 'hard'
   const [data, setData] = useState([]);
-  const [selectedGroup, setSelectedGroup] = useState(null);
-  const [groups, setGroups] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [scroll, setScroll] = React.useState("paper");
+  const [groups, setGroups] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(perPageitem);
   const [goToPage, setGoToPage] = useState("");
-
-  const handleClickOpen = useCallback((group) => {
-    setOpen(true);
-    setSelectedGroup(group);
-  }, []);
-
-  
-
-  const handleClose = useCallback(() => {
-    setOpen(false);
-    setSelectedGroup(null);
-  }, []);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     fetchData().then((result) => {
-      //console.log(result);
       const groupsWithReports = result.filter(
         (group) => group.Reports.length > 0
       );
       setData(groupsWithReports);
-      //console.log(groupsWithReports);
-      // setGroups(result);
+      setGroups(groupsWithReports);
     });
   }, []);
 
-
-
   const handlePageChange = useCallback((page) => {
     setCurrentPage(page);
+  }, []);
+
+  const handleOpenDeleteConfirmation = useCallback((groupId, type) => {
+    setOpenDeleteConfirmation(true);
+    setGroupIdToDelete(groupId);
+    setDeleteType(type);
+  }, []);
+
+  const handleCloseDeleteConfirmation = useCallback(() => {
+    setOpenDeleteConfirmation(false);
+    setGroupIdToDelete(null);
+    setDeleteType(null);
   }, []);
 
   const handleSearchChange = useCallback((event) => {
@@ -129,10 +85,10 @@ function ReportedGroups() {
   }, []);
 
   const filteredData = useMemo(() => {
-    return data.filter((item) =>
+    return groups.filter((item) =>
       item.groupName.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [data, searchQuery]);
+  }, [groups, searchQuery]);
 
   const numPages = useMemo(() => {
     return Math.ceil(filteredData.length / itemsPerPage) < 1
@@ -140,6 +96,64 @@ function ReportedGroups() {
       : Math.ceil(filteredData.length / itemsPerPage);
   }, [filteredData, itemsPerPage]);
 
+  const softDeleteGroup = useCallback(async () => {
+    if (!groupIdToDelete) return;
+    setIsLoading(true);
+
+    try {
+      const authToken = sessionStorage.getItem("bearerToken");
+      if (!authToken) throw new Error("Token Not Found");
+  
+      await axios.delete(`${baseUri}groups/${groupIdToDelete}`, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+  
+      const newData = await fetchData();
+      setData(newData.filter((group) => group.Reports.length > 0));
+      setGroups(newData.filter((group) => group.Reports.length > 0));
+  
+      setOpenDeleteConfirmation(false);
+      setGroupIdToDelete(null);
+      setDeleteType(null);
+    } catch (error) {
+      console.error("Error deleting group:", error);
+      alert("Error deleting group. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [baseUri, groupIdToDelete]);
+
+  const hardDeleteGroup = useCallback(async () => {
+    if (!groupIdToDelete) return;
+    setIsLoading(true);
+
+    try {
+      const authToken = sessionStorage.getItem("bearerToken");
+      if (!authToken) throw new Error("Token Not Found");
+
+      await axios.delete(`${baseUri}groups/harddelete/${groupIdToDelete}`, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+
+      const newData = await fetchData();
+      setData(newData.filter((group) => group.Reports.length > 0));
+      setGroups(newData.filter((group) => group.Reports.length > 0));
+
+      setOpenDeleteConfirmation(false);
+      setGroupIdToDelete(null);
+      setDeleteType(null);
+    } catch (error) {
+      console.error("Error hard deleting group:", error);
+      alert("Error hard deleting group. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [groupIdToDelete]);
+  
   const getPagination = useCallback(() => {
     const pages = [];
     if (numPages <= 3) {
@@ -271,7 +285,9 @@ function ReportedGroups() {
                         <th
                           scope="col"
                           className="px-6 py-3 text-xs font-medium text-white uppercase"
-                        ></th>
+                        >
+                          Remove
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -311,13 +327,39 @@ function ReportedGroups() {
                                 {reportedGroups.Reports.length}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
-                              
-                                <DialogBox
-                                  open={open}
-                                  handleClose={handleClose}
-                                  scroll={"paper"}
-                                  selectedGroup={reportedGroups}
-                                />
+                                <button
+                                  className="text-white bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-red-300 dark:focus:ring-red-800 shadow-lg shadow-red-500/50 dark:shadow-lg dark:shadow-red-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2"
+                                  onClick={() => handleOpenDeleteConfirmation(reportedGroups.groupId, 'soft')}
+                                >
+                                  Remove
+                                </button>
+                                <button
+                                  className="text-white bg-gradient-to-r from-red-700 via-red-800 to-red-900 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-red-300 dark:focus:ring-red-800 shadow-lg shadow-red-500/50 dark:shadow-lg dark:shadow-red-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2"
+                                  onClick={() => handleOpenDeleteConfirmation(reportedGroups.groupId, 'hard')}
+                                >
+                                  Hard Delete
+                                </button>
+                                <Dialog
+                                  open={openDeleteConfirmation && groupIdToDelete === reportedGroups.groupId}
+                                  onClose={handleCloseDeleteConfirmation}
+                                  aria-labelledby="alert-dialog-title"
+                                  aria-describedby="alert-dialog-description"
+                                >
+                                  <DialogTitle id="alert-dialog-title">
+                                    {deleteType === 'hard' ? "Hard Delete Group" : "Remove Group"}
+                                  </DialogTitle>
+                                  <DialogContent>
+                                    <DialogContentText id="alert-dialog-description">
+                                      {deleteType === 'hard' ? "Do you really want to permanently delete the group?" : "Do you really want to delete the group?"}
+                                    </DialogContentText>
+                                  </DialogContent>
+                                  <DialogActions>
+                                    <Button onClick={handleCloseDeleteConfirmation} disabled={isLoading}>No</Button>
+                                    <Button onClick={deleteType === 'hard' ? hardDeleteGroup : softDeleteGroup} autoFocus disabled={isLoading}>
+                                      {isLoading ? (deleteType === 'hard' ? "Hard Deleting..." : "Deleting...") : "Yes"}
+                                    </Button>
+                                  </DialogActions>
+                                </Dialog>
                               </td>
                             </tr>
                           );

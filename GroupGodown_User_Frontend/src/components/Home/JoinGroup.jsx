@@ -28,26 +28,22 @@ function JoinGroup() {
     <div className="d-flex justify-content-center ">
       
       <Helmet>
-        <title>
-          {`${groupName} | WhatsApp Group Link | ${
-            window.location.hostname.replace(/^www\./, '').split('.')[0].replace(/^\w/, c => c.toUpperCase())
-          }`}
-        </title>
-       
+        <title>{`${groupName} | WhatsApp Group Link | ${window.location.hostname.replace(/^www\./, '').split('.')[0].replace(/^\w/, c => c.toUpperCase())}`}</title>
+        {/* Open Graph Meta Tags */}
         <meta property="og:title" content={`${groupName} | Join WhatsApp Group`} />
-        <meta property="og:site_name" content="Group Godwon" />
-        <meta property="og:url" content={window.location.href} />
-        <meta 
-          property="og:description" 
-          content={`Join the ${groupName} WhatsApp group and connect with like-minded people. Explore more active WhatsApp groups on GroupGodwon!`} 
-        />
-        <meta property="og:type" content="website" />
-        <meta property="og:image" content={metaImage}></meta>
-        <meta property="og:locale" content="en_US" />
-        <meta 
-          name="description" 
-          content={`Join the ${groupName} WhatsApp group and connect with friends. Discover more active WhatsApp groups on GroupGodwon!`} 
-        />  
+        <meta property="og:site_name" content="Group Godown" />
+        <meta property="og:url" content="https://www.groupgodown.com/"/>
+        <meta property="og:description" content={`Join the ${groupName} WhatsApp group and connect with like-minded people. Explore more active WhatsApp groups on GroupGodwon!`} />
+        <meta property="og:type" content="artical" />
+        <meta property="og:image" content={`{https://www.groupgodown.com/}${metaImage}`} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:type" content="image/jpeg" />
+        <meta property="og:image:alt" content={`${groupName} WhatsApp group`} />
+        <meta property="og:locale" content="en_US" /> 
+
+        {/* SEO Meta Tags */}
+        <meta name="description" content={`Join the ${groupName} WhatsApp group and connect with friends. Discover more active WhatsApp groups on GroupGodwon!`} />  
       </Helmet>
 
       <div className="col-12 p-3">

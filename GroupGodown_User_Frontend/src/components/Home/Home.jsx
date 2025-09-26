@@ -189,7 +189,10 @@ export default function Home() {
 
         if (categoryName || countryName || languageName) {
           apiUrl = `${baseUri}groups`;
-          if (categoryName) { apiUrl += `/category/${categoryName}`; }
+          if (categoryName) {
+            const formattedCategoryName = categoryName.replace(/\//g, '-');
+            apiUrl += `/category/${formattedCategoryName}`;
+          }
           else if (countryName) { apiUrl += `/country/${countryName}`; }
           else if (languageName) { apiUrl += `/language/${languageName}`; }
         } else {
@@ -309,9 +312,9 @@ export default function Home() {
       const queryParams = [];
 
       if (Cat && Cat !== "") {
-        // Assuming Cat is already the category name, not ID
-        apiUrl += `/category/${Cat}`;
-        navigatePath += `/category/${Cat}`;
+        const formattedCat = Cat.replace(/\//g, '-');
+        apiUrl += `/category/${formattedCat}`;
+        navigatePath += `/category/${formattedCat}`;
       }
       if (Con && Con !== "") {
         apiUrl += `/country/${Con}`;
@@ -369,17 +372,35 @@ export default function Home() {
     <>
       <Helmet>
         <title>Join Unlimited WhatsApp groups | WA group links | groupgodown</title>
+         {/* Open Graph Meta Tags */}
         <meta property="og:title" content="Join Unlimited WhatsApp groups | WA group links | groupgodown"/>
         <meta property="og:site_name" content="Group Godown"/>
         <meta property="og:url" content="https://www.groupgodown.com/"/>
         <meta property="og:description" content="Join the best WhatsApp groups to connect with like-minded people! Discover how to promote your WhatsApp group and increase group members easily. Explore top groups today!" />
         <meta property="og:type" content="website"/>
-        <meta property="og:image" content={metaImage}></meta>
+        <meta property="og:image" content={`{https://www.groupgodown.com/}${metaImage}`} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:type" content="image/jpeg" />
+        <meta property="og:image:alt" content="Join Unlimited WhatsApp groups on Group Godown" />
         <meta property="og:locale" content="en_US" />
+
+        {/* SEO Meta Tags */}
         <meta name="description" content="Explore a wide range of WhatsApp group links on groupgodown.com, including Girls WhatsApp groups, Indian groups, share market groups, and more. Join and connect with like-minded individuals across the World." />
 	      <meta name="keywords" content="WhatsApp group link, Girls WhatsApp group link, WhatsApp group link girl India, India WhatsApp group link, Indian WhatsApp group link, Join WhatsApp group, Share market WhatsApp group link, WP group link, WhatsApp earning group, YouTube subscribe WhatsApp group" />
+        
+        {/* Verification + Canonical */}
         <meta name="google-site-verification" content="zqo3k0SHL5mAOnoSgEDnirh5Pf53vEmkczx2967yUEM" />
-        <link rel="canonical" href=" https://www.groupgodown.com/" />
+        <link rel="canonical" href="https://www.groupgodown.com/" />
+
+
+        {/* Twitter Meta Tags */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Join Unlimited WhatsApp groups | WA group links | groupgodown" />
+        <meta name="twitter:description" content="Join the best WhatsApp groups to connect with like-minded people! Discover how to promote your WhatsApp group and increase group members easily. Explore top groups today!" />
+        <meta name="twitter:image" content={`{https://www.groupgodown.com/}${metaImage}`} />
+        <meta name="twitter:image:alt" content="Join Unlimited WhatsApp groups on Group Godown" />
+        
       </Helmet>
 
       <div className="home-main-div">

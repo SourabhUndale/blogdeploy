@@ -1,4 +1,9 @@
 import useDataFetch from './useDataFetch';
+import link from "../../../link.json";
+
+const obaseUri = JSON.parse(JSON.stringify(link));
+export const baseUri = obaseUri.DefaultbaseUri;
+
 
 export const useCountries = () => {
   return useDataFetch(
@@ -12,13 +17,13 @@ export const useLanguages = () => {
 };
 
 export const useCategories = () => {
-  return useDataFetch('https://base.groupgodown.com/api/Category', []);
+  return useDataFetch(`${baseUri}api/Category`, []);
 };
 
 export const useApplicationTypes = () => {
-  return useDataFetch('https://base.groupgodown.com/api/Application', []);
+  return useDataFetch(`${baseUri}api/Application`, []);
 };
 
 export const useGroups = () => {
-  return useDataFetch('https://base.groupgodown.com/api/Group/id/Groups', []);
+  return useDataFetch(`${baseUri}api/Group/id/Groups`, []);
 };

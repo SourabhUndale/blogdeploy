@@ -106,7 +106,10 @@ namespace GrouosAPI.Controllers
         [HttpGet("Category/{category_Name}")]
         public IActionResult GetGroupsByCategory(string category_Name)
         {
-            var groupDto = _groupRepository.GetGroupsByCategoryName(category_Name);
+            // Reverse the transformation: replace hyphens with forward slashes
+            var originalCategoryName = category_Name.Replace('-', '/');
+
+            var groupDto = _groupRepository.GetGroupsByCategoryName(originalCategoryName);
             if (groupDto != null)
             {
                 return Ok(groupDto);

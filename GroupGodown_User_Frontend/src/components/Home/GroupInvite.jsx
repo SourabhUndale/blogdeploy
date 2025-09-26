@@ -162,13 +162,17 @@ function GroupInvite() {
         <meta name="description" content={singlegroup?.groupDesc || 'Join and share WhatsApp groups from various categories, countries, and languages.'} />
         <meta property="og:title" content={singlegroup?.groupName || 'Group Godown'} />
         <meta property="og:site_name" content="Group Godown" />
-        <meta property="og:url" content={window.location.href} />
-        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://www.groupgodown.com/"/>
+        <meta property="og:type" content="artical" />
         <meta
           property="og:description"
           content={singlegroup?.groupDesc || 'Loading group description...'} 
         />
-        <meta property="og:image" content={absoluteGroupImage || `${window.location.origin}${replacelogo}`} />
+        <meta property="og:image" content={absoluteGroupImage || `{https://www.groupgodown.com/}${replacelogo}`} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:type" content="image/jpeg" />
+        <meta property="og:image:alt" content={singlegroup?.groupName || 'Group Image'} />
         <meta property="og:locale" content="en_US" />
       </Helmet>
 
@@ -222,7 +226,7 @@ function GroupInvite() {
 
         <div className="group-invite__description">
           <p>
-            The WhatsApp group <span className="highlight">{singlegroup?.groupName}</span> 
+            The WhatsApp group <span className="highlight">{singlegroup?.groupName} </span> 
             is a <span className="highlight">{singlegroup?.Language}</span> WhatsApp group. 
             It is a <span className="highlight">{singlegroup?.Category?.catName}</span> WhatsApp group, 
             and is a <span className="highlight">{singlegroup?.country}</span> WhatsApp group. 

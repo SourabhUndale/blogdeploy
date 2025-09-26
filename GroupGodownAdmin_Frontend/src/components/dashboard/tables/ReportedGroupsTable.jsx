@@ -170,7 +170,7 @@ function ReportedGroupsTable() {
       const authToken = sessionStorage.getItem("bearerToken");
       if (!authToken) throw new Error("Token Not Found");
 
-      await axios.delete(`https://localhost:7134/groups/harddelete/${groupIdToDelete}`, {
+      await axios.delete(`${baseUri}groups/harddelete/${groupIdToDelete}`, {
         headers: {
           Authorization: `Bearer ${authToken}`,
         },
